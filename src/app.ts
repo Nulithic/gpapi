@@ -7,8 +7,10 @@ import mongoose from "mongoose";
 const app: Application = express();
 const port: number = 3001;
 
+console.log(process.env.TEST);
+
 mongoose
-  .connect(process.env.DATABASE_URL)
+  .connect(process.env.MONGO_URL)
   .then(() => {
     console.log("Connected to GreenProjectDB");
   })
