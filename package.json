@@ -7,7 +7,7 @@
   "license": "ISC",
   "scripts": {
     "dev": "NODE_PATH=./src nodemon src/app.ts",
-    "start": "NODE_PATH=./src src/app.ts"
+    "start": "NODE_PATH=./src ts-node src/app.ts"
   },
   "dependencies": {
     "axios": "^0.27.2",
