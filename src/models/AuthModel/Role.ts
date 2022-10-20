@@ -6,6 +6,7 @@ const RoleModel = mongoose.model(
     {
       role: String,
       parent: String || null,
+      path: String,
       name: String,
       status: Boolean,
       children: [],
