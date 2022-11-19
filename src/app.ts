@@ -9,6 +9,7 @@ import cors from "cors";
 
 import adminRoutes from "routes/adminRoutes";
 import authRoutes from "routes/authRoutes";
+import customerRoutes from "routes/customerRoutes";
 
 const app = express();
 const port = process.env.PORT;
@@ -29,6 +30,7 @@ app.set("io", io);
 
 adminRoutes(app);
 authRoutes(app);
+customerRoutes(app);
 
 io.on("connection", (socket) => {
   const count = io.engine.clientsCount;
