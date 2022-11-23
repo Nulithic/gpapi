@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const RoleModel = mongoose.model(
-  "roles",
+  "Roles",
   new mongoose.Schema(
     {
       role: String,
@@ -13,7 +13,7 @@ const RoleModel = mongoose.model(
     },
     { versionKey: false }
   ),
-  "roles"
+  "Roles"
 );
 
 export default RoleModel;

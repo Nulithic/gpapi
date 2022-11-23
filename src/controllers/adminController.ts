@@ -127,7 +127,7 @@ const updateUserRole = async (req: Request, res: Response) => {
     const updatedUser = await AuthModel.User.findOneAndUpdate({ username: req.body.username }, { roles: userRoles });
     const newUser = {
       username: updatedUser.username,
-      lastLogin: updatedUser.last_login,
+      lastLogin: updatedUser.lastLogin,
       online: updatedUser.online,
       roles: userRoles,
       admin: updatedUser.admin,

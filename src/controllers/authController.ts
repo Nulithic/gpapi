@@ -4,9 +4,9 @@ import bcrypt from "bcryptjs";
 
 import { AuthModel } from "models";
 
-const getUser = (req: Request, res: Response) => {
-  AuthModel.User.findOne({ username: req.body.user }, (err: any, user: any) => {
-    if (err) return res.status(500).send({ message: err });
+const getUser = async (req: Request, res: Response) => {
+  try {
+    const user = await AuthModel.User.findOne({ username: req.body.user });
 
     const newUser = {
       username: user.username,
@@ -14,10 +14,13 @@ const getUser = (req: Request, res: Response) => {
       online: user.online,
       roles: user.roles,
       admin: user.admin,
+      id: user._id,
     };
 
     res.status(200).send({ user: newUser });
-  });
+  } catch (err) {
+    return res.status(500).send({ message: err });
+  }
 };
 
 const userLogin = (req: Request, res: Response) => {
@@ -53,9 +56,16 @@ const userLogout = (req: Request, res: Response) => {
   });
 };
 
+const setStateCookie = (req: Request, res: Response) => {
+  const encoded = Buffer.from(process.env.STATE_COOKIE).toString("base64");
+  res.cookie("state", encoded);
+  res.send("Cookie have been saved successfully");
+};
+
 const authControllers = {
   getUser,
   userLogin,
   userLogout,
+  setStateCookie,
 };
 export default authControllers;

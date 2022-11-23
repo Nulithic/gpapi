@@ -1,19 +1,19 @@
 import mongoose from "mongoose";
 
 const UserModel = mongoose.model(
-  "users",
+  "Users",
   new mongoose.Schema(
     {
       username: String,
       password: String,
-      last_login: String,
+      lastLogin: String,
       online: Boolean,
       roles: [],
       admin: Boolean,
     },
     { versionKey: false }
   ),
-  "users"
+  "Users"
 );
 
 export default UserModel;

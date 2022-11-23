@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import cookieParser from "cookie-parser";
+
 import express from "express";
 import mongoose from "mongoose";
 import http from "http";
@@ -14,8 +16,14 @@ import customerRoutes from "routes/customerRoutes";
 const app = express();
 const port = process.env.PORT;
 
+app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://apps.gp:5173",
+    credentials: true,
+  })
+);
 
 const server = http.createServer(app);
 const io = new Server(server, {
