@@ -1,7 +1,7 @@
 import { Express } from "express";
 
-import verifyToken from "../middleware/verifyToken";
-import warehouseControllers from "../controllers/warehouseControllers";
+import verifyToken from "auth/verifyToken";
+import warehouseControllers from "controllers/warehouseController";
 
 const warehouseRoutes = (app: Express) => {
   app.use((req, res, next) => {
@@ -10,22 +10,21 @@ const warehouseRoutes = (app: Express) => {
     next();
   });
 
-  //GET
-  app.get("/api/get/warehouse/bulk_ship/template", [verifyToken], warehouseControllers.getBulkShipTemplate);
-  app.get("/api/get/warehouse/compare/template", [verifyToken], warehouseControllers.getCompareTemplate);
-  app.get("/api/get/warehouse/transfer/template", [verifyToken], warehouseControllers.getTransferTemplate);
-  app.get("/api/get/warehouse/inventory_count/template", [verifyToken], warehouseControllers.getInventoryCountTemplate);
+  // app.get("/api/get/warehouse/inventory_count/template", [verifyToken], warehouseControllers.getInventoryCountTemplate);
   app.get("/api/get/warehouse/inventory_count/list", [verifyToken], warehouseControllers.getInventoryCountList);
   app.get("/api/get/warehouse/inventory_count/current", [verifyToken], warehouseControllers.getCurrentCount);
+  // app.post("/api/post/warehouse/inventory_count/add/count", [verifyToken], warehouseControllers.addInventoryCount);
+  // app.post("/api/post/warehouse/inventory_count/add/item_count", [verifyToken], warehouseControllers.addItemCount);
+  // app.post("/api/post/warehouse/inventory_count/delete/count", [verifyToken], warehouseControllers.deleteInventoryCount);
+  // app.post("/api/post/warehouse/inventory_count/delete/item_count", [verifyToken], warehouseControllers.deleteItemCount);
 
-  //POST
-  app.post("/api/post/warehouse/bulk_ship", [verifyToken], warehouseControllers.postBulkShip);
-  app.post("/api/post/warehouse/compare", [verifyToken], warehouseControllers.postCompare);
-  app.post("/api/post/warehouse/transfer", [verifyToken], warehouseControllers.postWarehouseTransfer);
-  app.post("/api/post/warehouse/inventory_count/add/count", [verifyToken], warehouseControllers.addInventoryCount);
-  app.post("/api/post/warehouse/inventory_count/add/item_count", [verifyToken], warehouseControllers.addItemCount);
-  app.post("/api/post/warehouse/inventory_count/delete/count", [verifyToken], warehouseControllers.deleteInventoryCount);
-  app.post("/api/post/warehouse/inventory_count/delete/item_count", [verifyToken], warehouseControllers.deleteItemCount);
+  // app.get("/api/get/warehouse/bulk_ship/template", [verifyToken], warehouseControllers.getBulkShipTemplate);
+  // app.get("/api/get/warehouse/compare/template", [verifyToken], warehouseControllers.getCompareTemplate);
+  // app.get("/api/get/warehouse/transfer/template", [verifyToken], warehouseControllers.getTransferTemplate);
+
+  // app.post("/api/post/warehouse/bulk_ship", [verifyToken], warehouseControllers.postBulkShip);
+  // app.post("/api/post/warehouse/compare", [verifyToken], warehouseControllers.postCompare);
+  // app.post("/api/post/warehouse/transfer", [verifyToken], warehouseControllers.postWarehouseTransfer);
 };
 
 export default warehouseRoutes;

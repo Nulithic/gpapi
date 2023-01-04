@@ -1,3 +1,4 @@
 import InventoryCount from "./InventoryCount";
+import ItemCount from "./ItemCount";
 
-export default { InventoryCount };
+export default { InventoryCount, ItemCount };

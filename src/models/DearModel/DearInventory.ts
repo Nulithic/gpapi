@@ -1,24 +1,24 @@
 import mongoose from "mongoose";
 
 const DearInventory = mongoose.model(
-  "dear_inventory",
+  "DearInventory",
   new mongoose.Schema(
     {
       sku: String,
       name: String,
       site: String,
       bin: String,
-      location_id: String,
+      locationID: String,
       location: String,
-      on_hand: Number,
+      onHand: Number,
       allocated: Number,
       available: Number,
-      on_order: Number,
-      stock_on_hand: Number,
+      onOrder: Number,
+      stockOnHand: Number,
     },
     { versionKey: false }
   ),
-  "dear_inventory"
+  "DearInventory"
 );
 
 export default DearInventory;

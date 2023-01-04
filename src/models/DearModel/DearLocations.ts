@@ -1,17 +1,17 @@
 import mongoose from "mongoose";
 
 const DearLocations = mongoose.model(
-  "dear_locations",
+  "DearLocations",
   new mongoose.Schema(
     {
-      location_id: String,
+      locationID: String,
       site: String,
       bin: String,
       location: String,
     },
     { versionKey: false }
   ),
-  "dear_locations"
+  "DearLocations"
 );
 
 export default DearLocations;

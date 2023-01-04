@@ -12,6 +12,8 @@ import cors from "cors";
 import adminRoutes from "routes/adminRoutes";
 import authRoutes from "routes/authRoutes";
 import customerRoutes from "routes/customerRoutes";
+import warehouseRoutes from "routes/warehouseRoutes";
+import dearRoutes from "routes/dearRoutes";
 
 const app = express();
 const port = process.env.PORT;
@@ -39,10 +41,15 @@ app.set("io", io);
 adminRoutes(app);
 authRoutes(app);
 customerRoutes(app);
+warehouseRoutes(app);
+dearRoutes(app);
 
 io.on("connection", (socket) => {
   const count = io.engine.clientsCount;
-  console.log(count, socket.handshake.query);
+  const query = socket.handshake.query;
+  socket.on("user", (arg) => {
+    console.log(`Total Clients: ${count} | User: ${arg.username} | Time: ${query.timeStamp}`);
+  });
   socket.on("disconnect", (reason) => {
     console.log(reason);
   });

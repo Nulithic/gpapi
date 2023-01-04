@@ -18,14 +18,18 @@ const getMicroCenterOrders = async (req: Request, res: Response) => {
   const spsToken = "Bearer " + req.query.spsToken;
   const pathName = req.query.pathName;
 
-  const response = await axios.get(`https://api.spscommerce.com/transactions/v5/data/out/${pathName}`, {
-    headers: { Authorization: spsToken },
-  });
+  try {
+    const response = await axios.get(`https://api.spscommerce.com/transactions/v5/data/`, {
+      headers: { Authorization: spsToken },
+    });
 
-  const xmlData = response.data;
-  const jsonData = await parseXml(xmlData);
+    const xmlData = response.data;
+    // const jsonData = await parseXml(xmlData);
 
-  return res.status(200).send({ orders: jsonData });
+    return res.status(200).send({ orders: xmlData });
+  } catch (err) {
+    res.status(500).send({ message: err });
+  }
 };
 
 export default { getMicroCenterOrders };
