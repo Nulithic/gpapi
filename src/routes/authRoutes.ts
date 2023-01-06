@@ -5,7 +5,7 @@ import authControllers from "controllers/authController";
 
 const authRoutes = (app: Express) => {
   app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "http://apps.gp:5173");
+    res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Credentials", "true");
     res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, x-access-token");
     next();
