@@ -55,6 +55,7 @@ io.on("connection", (socket) => {
   });
 });
 
+mongoose.set("strictQuery", false);
 mongoose
   .connect(process.env.MONGO_URL, {
     authSource: "admin",

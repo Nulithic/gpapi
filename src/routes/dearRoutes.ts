@@ -17,8 +17,8 @@ const dearRoutes = (app: Express) => {
   // app.post("/api/post/dear/sale_order_id", [verifyToken], dearControllers.getDearSaleOrderByID);
 
   app.get("/api/get/dear/update_products", [verifyToken], dearControllers.updateDearProducts);
-  // app.get("/api/get/dear/update_locations", [verifyToken], dearControllers.updateDearLocations);
-  // app.get("/api/get/dear/update_inventory", [verifyToken], dearControllers.updateDearInventory);
+  app.get("/api/get/dear/update_locations", [verifyToken], dearControllers.updateDearLocations);
+  app.get("/api/get/dear/update_inventory", [verifyToken], dearControllers.updateDearInventory);
   // app.get("/api/get/dear/update_sale_list", [verifyToken], dearControllers.updateDearSaleList);
 };
 
