@@ -1,16 +1,16 @@
 import mongoose from "mongoose";
 
 const DearLogs = mongoose.model(
-  "dear_logs",
+  "DearLogs",
   new mongoose.Schema(
     {
-      log_id: String,
-      last_updated: String,
-      updated_by: String,
+      id: String,
+      lastUpdated: String,
+      updatedBy: String,
     },
     { versionKey: false }
   ),
-  "dear_logs"
+  "DearLogs"
 );
 
 export default DearLogs;

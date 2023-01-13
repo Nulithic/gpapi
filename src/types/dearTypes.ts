@@ -3,7 +3,6 @@ export interface ProductList {
   Page: number;
   Products: Product[];
 }
-
 export interface Product {
   ID: string;
   SKU: string;
@@ -34,7 +33,7 @@ export interface Product {
   PriceTier8: number;
   PriceTier9: number;
   PriceTier10: number;
-  PriceTiers: { Low: number; "L-M": number; Mid: number; "M-H": number; High: number; FlatRate: number };
+  PriceTiers: { Low: number; "L-M": number; Mid: number; "M-H": number; High: number; "Flat Rate": number };
   AverageCost: number;
   ShortDescription: string;
   InternalNote: string;
@@ -84,4 +83,29 @@ export interface Product {
   CartonLength: number;
   CartonQuantity: number;
   CartonInnerQuantity: number;
+}
+
+export interface LocationList {
+  ID: string;
+  Name: string;
+  Bins: Bin[];
+}
+export interface Bin {
+  ID: string;
+  Name: string;
+}
+
+export interface Inventory {
+  ID: string;
+  SKU: string;
+  Name: string;
+  Barcode: string;
+  Location: string;
+  Bin: string;
+  OnHand: number;
+  Allocated: number;
+  Available: number;
+  OnOrder: number;
+  StockOnHand: number;
+  InTransit: number;
 }
