@@ -10,7 +10,7 @@ const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-const getDearProducts = async (io: any, socketID: string) => {
+const getDearProductsAPI = async (io: any, socketID: string) => {
   try {
     let products = [];
     const responseTotal = await axios.get("https://inventory.dearsystems.com/ExternalApi/v2/product?Page=1&Limit=1000", {
@@ -45,7 +45,7 @@ const getDearProducts = async (io: any, socketID: string) => {
   }
 };
 
-const getDearLocations = async (io: any, socketID: string) => {
+const getDearLocationsAPI = async (io: any, socketID: string) => {
   try {
     const siteList = [
       "Main Warehouse",
@@ -78,7 +78,7 @@ const getDearLocations = async (io: any, socketID: string) => {
   }
 };
 
-const getDearInventory = async (io: any, socketID: string) => {
+const getDearInventoryAPI = async (io: any, socketID: string) => {
   try {
     let inventory = [];
     const responseTotal = await axios.get("https://inventory.dearsystems.com/ExternalApi/v2/ref/productavailability?Page=1&Limit=1000", {
@@ -108,4 +108,4 @@ const getDearInventory = async (io: any, socketID: string) => {
   }
 };
 
-export { getDearProducts, getDearLocations, getDearInventory };
+export { getDearProductsAPI, getDearLocationsAPI, getDearInventoryAPI };

@@ -1,19 +1,71 @@
 import { Request, Response } from "express";
 import { Server } from "socket.io";
 
-import { getDearProducts, getDearLocations, getDearInventory } from "api/DearSystems";
+import { getDearProductsAPI, getDearLocationsAPI, getDearInventoryAPI } from "api/DearSystems";
 import { DearModel, LogModel } from "models";
 
 const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
+const updateDearLocations = async (req: Request, res: Response) => {
+  try {
+    const socketID = req.query.socketID.toString();
+    const io = req.app.get("io") as Server;
+
+    const locationList = await getDearLocationsAPI(io, socketID);
+
+    let progress = 0;
+    const progressMax = locationList.reduce((a, v) => a + v.Bins.length, locationList.length);
+    io.to(socketID).emit("updateDearLocationsMax", progressMax);
+
+    for (let i = 0; i < locationList.length; i++) {
+      const location = {
+        locationID: locationList[i].ID,
+        site: locationList[i].Name,
+        bin: "",
+        location: locationList[i].Name,
+      };
+
+      await DearModel.DearLocations.updateOne({ locationID: locationList[i].ID }, { $set: location }, { upsert: true });
+      progress = progress + 1;
+      io.to(socketID).emit("updateDearLocations", progress);
+
+      for (let k = 0; k < locationList[i].Bins.length; k++) {
+        const bin = {
+          locationID: locationList[i].Bins[k].ID,
+          site: locationList[i].Name,
+          bin: locationList[i].Bins[k].Name,
+          location: `${locationList[i].Name}: ${locationList[i].Bins[k].Name}`,
+        };
+
+        await DearModel.DearLocations.updateOne({ locationID: locationList[i].Bins[k].ID }, { $set: bin }, { upsert: true });
+        progress = progress + 1;
+        io.to(socketID).emit("updateDearLocations", progress);
+
+        await sleep(10);
+      }
+      await sleep(10);
+    }
+
+    await LogModel.DearLogs.updateOne(
+      { id: "updateDearLocations" },
+      { id: "updateDearLocations", lastUpdated: new Date().toLocaleString("en-US"), updatedBy: req.body.user },
+      { upsert: true }
+    );
+
+    res.status(200).send(locationList);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Update Failed.");
+  }
+};
 const updateDearProducts = async (req: Request, res: Response) => {
   try {
     const socketID = req.query.socketID.toString();
     const io = req.app.get("io") as Server;
 
-    const productList = await getDearProducts(io, socketID);
+    const productList = await getDearProductsAPI(io, socketID);
 
     const productListSize = productList.length;
     io.to(socketID).emit("updateDearProductsMax", productListSize);
@@ -127,64 +179,12 @@ const updateDearProducts = async (req: Request, res: Response) => {
     res.status(500).send("Update Failed.");
   }
 };
-const updateDearLocations = async (req: Request, res: Response) => {
-  try {
-    const socketID = req.query.socketID.toString();
-    const io = req.app.get("io") as Server;
-
-    const locationList = await getDearLocations(io, socketID);
-
-    let progress = 0;
-    const progressMax = locationList.reduce((a, v) => a + v.Bins.length, locationList.length);
-    io.to(socketID).emit("updateDearLocationsMax", progressMax);
-
-    for (let i = 0; i < locationList.length; i++) {
-      const location = {
-        locationID: locationList[i].ID,
-        site: locationList[i].Name,
-        bin: "",
-        location: locationList[i].Name,
-      };
-
-      await DearModel.DearLocations.updateOne({ locationID: locationList[i].ID }, { $set: location }, { upsert: true });
-      progress = progress + 1;
-      io.to(socketID).emit("updateDearLocations", progress);
-
-      for (let k = 0; k < locationList[i].Bins.length; k++) {
-        const bin = {
-          locationID: locationList[i].Bins[k].ID,
-          site: locationList[i].Name,
-          bin: locationList[i].Bins[k].Name,
-          location: `${locationList[i].Name}: ${locationList[i].Bins[k].Name}`,
-        };
-
-        await DearModel.DearLocations.updateOne({ locationID: locationList[i].Bins[k].ID }, { $set: bin }, { upsert: true });
-        progress = progress + 1;
-        io.to(socketID).emit("updateDearLocations", progress);
-
-        await sleep(10);
-      }
-      await sleep(10);
-    }
-
-    await LogModel.DearLogs.updateOne(
-      { id: "updateDearLocations" },
-      { id: "updateDearLocations", lastUpdated: new Date().toLocaleString("en-US"), updatedBy: req.body.user },
-      { upsert: true }
-    );
-
-    res.status(200).send(locationList);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Update Failed.");
-  }
-};
 const updateDearInventory = async (req: Request, res: Response) => {
   try {
     const socketID = req.query.socketID.toString();
     const io = req.app.get("io") as Server;
 
-    const inventory = await getDearInventory(io, socketID);
+    const inventory = await getDearInventoryAPI(io, socketID);
     io.to(socketID).emit("updateDearInventoryMax", inventory.length);
 
     for (let i = 0; i < inventory.length; i++) {
@@ -225,5 +225,30 @@ const updateDearInventory = async (req: Request, res: Response) => {
   }
 };
 
-const dearControllers = { updateDearProducts, updateDearLocations, updateDearInventory };
+const getDearLocations = async (req: Request, res: Response) => {
+  try {
+    const locations = await DearModel.DearLocations.find();
+    res.status(200).send(locations);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+};
+const getDearProducts = async (req: Request, res: Response) => {
+  try {
+    const locations = await DearModel.DearProducts.find();
+    res.status(200).send(locations);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+};
+const getDearInventory = async (req: Request, res: Response) => {
+  try {
+    const locations = await DearModel.DearInventory.find();
+    res.status(200).send(locations);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+};
+
+const dearControllers = { updateDearProducts, updateDearLocations, updateDearInventory, getDearInventory, getDearLocations, getDearProducts };
 export default dearControllers;
