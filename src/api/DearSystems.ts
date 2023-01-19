@@ -6,10 +6,6 @@ const headers = {
   "api-auth-applicationkey": process.env.API_KEY,
 };
 
-const sleep = (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
 const getDearProductsAPI = async (io: any, socketID: string) => {
   try {
     let products = [];
@@ -108,4 +104,49 @@ const getDearInventoryAPI = async (io: any, socketID: string) => {
   }
 };
 
-export { getDearProductsAPI, getDearLocationsAPI, getDearInventoryAPI };
+const getDearSaleOrderAPI = async (search: string, io: any, socketID: string) => {
+  try {
+    const response = await axios.get(`https://inventory.dearsystems.com/ExternalApi/v2/saleList?Search=${search}`, {
+      headers: headers,
+    });
+
+    const total = response.data.Total;
+    const saleList = response.data.SaleList;
+    let filtered;
+
+    if (total > 1) {
+      const notVoided = saleList.filter((item: any) => item.Status !== "VOIDED");
+      filtered = notVoided[0];
+    } else filtered = saleList[0];
+
+    const resSaleOrder = await axios.get(`https://inventory.dearsystems.com/ExternalApi/v2/sale?ID=${filtered.SaleID}`, {
+      headers: headers,
+    });
+
+    io.to(socketID).emit("getDearSaleOrderAPI", "Sale Order Found.");
+
+    return resSaleOrder.data;
+  } catch (e) {
+    io.to(socketID).emit("getDearSaleOrderAPI", "Sale Order Not Found.");
+    console.log(`DEAR API getDearSaleOrder error. - ${e}`);
+    return {};
+  }
+};
+
+const postDearSaleFulfilmentShipAPI = async (orderNumber: any, shipData: any, io: any, socketID: string) => {
+  await axios
+    .post("https://inventory.dearsystems.com/ExternalApi/v2/sale/fulfilment/ship", shipData, {
+      headers: headers,
+    })
+    .then((res) => {
+      io.to(socketID).emit("postDearSaleFulfilmentShipAPI", `${orderNumber} |  ${res.data.Status}`);
+    })
+    .catch((error) => {
+      if (error.response) {
+        console.log(`postDearSaleFulfilmentShipAPI error - ${orderNumber} | ${error.response.data[0].Exception}`);
+        io.to(socketID).emit("postDearSaleFulfilmentShipAPI", `${orderNumber} | ${error.response.data[0].Exception}`);
+      }
+    });
+};
+
+export { getDearProductsAPI, getDearLocationsAPI, getDearInventoryAPI, getDearSaleOrderAPI, postDearSaleFulfilmentShipAPI };

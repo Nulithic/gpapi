@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { MicroCenter } from "controllers/customerController";
+import { MicroCenter } from "controllers/customers";
 
 const customerRoutes = (app: Express) => {
   app.use((req, res, next) => {

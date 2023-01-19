@@ -9,11 +9,11 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 
-import adminRoutes from "routes/adminRoutes";
-import authRoutes from "routes/authRoutes";
-import customerRoutes from "routes/customerRoutes";
-import warehouseRoutes from "routes/warehouseRoutes";
-import dearRoutes from "routes/dearRoutes";
+import adminRoutes from "routes/admin";
+import authRoutes from "routes/auth";
+import customerRoutes from "routes/customer";
+import warehouseRoutes from "routes/warehouse";
+import dearRoutes from "routes/dear";
 
 const app = express();
 const port = process.env.PORT;

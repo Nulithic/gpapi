@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import dearControllers from "controllers/dearController";
+import dear from "controllers/dear";
 
 const dearRoutes = (app: Express) => {
   app.use((req, res, next) => {
@@ -10,15 +10,15 @@ const dearRoutes = (app: Express) => {
     next();
   });
 
-  app.get("/api/get/dear/locations", [verifyToken], dearControllers.getDearLocations);
-  app.get("/api/get/dear/products", [verifyToken], dearControllers.getDearProducts);
-  app.get("/api/get/dear/inventory", [verifyToken], dearControllers.getDearInventory);
+  app.get("/api/get/dear/locations", [verifyToken], dear.getDearLocations);
+  app.get("/api/get/dear/products", [verifyToken], dear.getDearProducts);
+  app.get("/api/get/dear/inventory", [verifyToken], dear.getDearInventory);
   // app.get("/api/get/dear/sale_list", [verifyToken], dearControllers.getDearSaleList);
   // app.post("/api/post/dear/sale_order_id", [verifyToken], dearControllers.getDearSaleOrderByID);
 
-  app.get("/api/get/dear/update_locations", [verifyToken], dearControllers.updateDearLocations);
-  app.get("/api/get/dear/update_products", [verifyToken], dearControllers.updateDearProducts);
-  app.get("/api/get/dear/update_inventory", [verifyToken], dearControllers.updateDearInventory);
+  app.get("/api/get/dear/update_locations", [verifyToken], dear.updateDearLocations);
+  app.get("/api/get/dear/update_products", [verifyToken], dear.updateDearProducts);
+  app.get("/api/get/dear/update_inventory", [verifyToken], dear.updateDearInventory);
   // app.get("/api/get/dear/update_sale_list", [verifyToken], dearControllers.updateDearSaleList);
 };
 

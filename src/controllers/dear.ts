@@ -1,15 +1,16 @@
 import { Request, Response } from "express";
 import { Server } from "socket.io";
 
+import { userAction } from "utilities/userAction";
 import { getDearProductsAPI, getDearLocationsAPI, getDearInventoryAPI } from "api/DearSystems";
 import { DearModel, LogModel } from "models";
 
-const sleep = (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
+import sleep from "utilities/sleep";
 
 const updateDearLocations = async (req: Request, res: Response) => {
   try {
+    userAction(req.body.user, "updateDearLocations");
+
     const socketID = req.query.socketID.toString();
     const io = req.app.get("io") as Server;
 
@@ -62,6 +63,8 @@ const updateDearLocations = async (req: Request, res: Response) => {
 };
 const updateDearProducts = async (req: Request, res: Response) => {
   try {
+    userAction(req.body.user, "updateDearProducts");
+
     const socketID = req.query.socketID.toString();
     const io = req.app.get("io") as Server;
 
@@ -181,6 +184,8 @@ const updateDearProducts = async (req: Request, res: Response) => {
 };
 const updateDearInventory = async (req: Request, res: Response) => {
   try {
+    userAction(req.body.user, "updateDearInventory");
+
     const socketID = req.query.socketID.toString();
     const io = req.app.get("io") as Server;
 
@@ -227,6 +232,7 @@ const updateDearInventory = async (req: Request, res: Response) => {
 
 const getDearLocations = async (req: Request, res: Response) => {
   try {
+    userAction(req.body.user, "getDearLocations");
     const locations = await DearModel.DearLocations.find();
     res.status(200).send(locations);
   } catch (err) {
@@ -235,6 +241,7 @@ const getDearLocations = async (req: Request, res: Response) => {
 };
 const getDearProducts = async (req: Request, res: Response) => {
   try {
+    userAction(req.body.user, "getDearProducts");
     const locations = await DearModel.DearProducts.find();
     res.status(200).send(locations);
   } catch (err) {
@@ -243,6 +250,7 @@ const getDearProducts = async (req: Request, res: Response) => {
 };
 const getDearInventory = async (req: Request, res: Response) => {
   try {
+    userAction(req.body.user, "getDearInventory");
     const locations = await DearModel.DearInventory.find();
     res.status(200).send(locations);
   } catch (err) {

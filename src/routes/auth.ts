@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import authControllers from "controllers/authController";
+import auth from "controllers/auth";
 
 const authRoutes = (app: Express) => {
   app.use((req, res, next) => {
@@ -12,12 +12,12 @@ const authRoutes = (app: Express) => {
   });
 
   //GET
-  app.get("/api/get/user", [verifyToken], authControllers.getUser);
-  app.get("/api/get/set_state_cookie", authControllers.setStateCookie);
+  app.get("/api/get/user", [verifyToken], auth.getUser);
+  app.get("/api/get/set_state_cookie", auth.setStateCookie);
 
   //POST
-  app.post("/api/post/user/login", authControllers.userLogin);
-  app.post("/api/post/user/logout", [verifyToken], authControllers.userLogout);
+  app.post("/api/post/user/login", auth.userLogin);
+  app.post("/api/post/user/logout", [verifyToken], auth.userLogout);
 };
 
 export default authRoutes;
