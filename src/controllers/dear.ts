@@ -242,8 +242,8 @@ const getDearLocations = async (req: Request, res: Response) => {
 const getDearProducts = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "getDearProducts");
-    const locations = await DearModel.DearProducts.find();
-    res.status(200).send(locations);
+    const products = await DearModel.DearProducts.find();
+    res.status(200).send(products);
   } catch (err) {
     res.status(500).send(err);
   }
@@ -251,8 +251,8 @@ const getDearProducts = async (req: Request, res: Response) => {
 const getDearInventory = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "getDearInventory");
-    const locations = await DearModel.DearInventory.find();
-    res.status(200).send(locations);
+    const inventory = await DearModel.DearInventory.find();
+    res.status(200).send(inventory);
   } catch (err) {
     res.status(500).send(err);
   }
