@@ -149,4 +149,20 @@ const postDearSaleFulfilmentShipAPI = async (orderNumber: any, shipData: any, io
     });
 };
 
-export { getDearProductsAPI, getDearLocationsAPI, getDearInventoryAPI, getDearSaleOrderAPI, postDearSaleFulfilmentShipAPI };
+const postDearStockTransferAPI = async (transfer: any, io: any, socketID: string) => {
+  await axios
+    .post("https://inventory.dearsystems.com/ExternalApi/v2/stockTransfer", transfer, {
+      headers: headers,
+    })
+    .then((res) => {
+      io.to(socketID).emit("postDearStockTransferAPI", `${res.data.Number}`);
+    })
+    .catch((error) => {
+      if (error.response) {
+        console.log(`postDearStockTransferAPI error - ${error.response.data[0].Exception}`);
+        io.to(socketID).emit("postDearStockTransferAPI", `${error.response.data[0].Exception}`);
+      }
+    });
+};
+
+export { getDearProductsAPI, getDearLocationsAPI, getDearInventoryAPI, getDearSaleOrderAPI, postDearSaleFulfilmentShipAPI, postDearStockTransferAPI };

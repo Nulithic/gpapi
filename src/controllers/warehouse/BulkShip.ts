@@ -5,8 +5,6 @@ import { getDearSaleOrderAPI, postDearSaleFulfilmentShipAPI } from "api/DearSyst
 import { userAction } from "utilities/userAction";
 import sleep from "utilities/sleep";
 
-//Bulk Ship
-
 const getBulkShipTemplate = (req: Request, res: Response) => {
   userAction(req.body.user, "getBulkShipTemplate");
   const directoryPath = path.dirname(require.main.filename) + "/resources/downloads/";

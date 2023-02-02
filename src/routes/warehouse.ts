@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { BulkShip } from "controllers/warehouse";
+import { BulkShip, Transfer } from "controllers/warehouse";
 
 const warehouseRoutes = (app: Express) => {
   app.use((req, res, next) => {
@@ -24,8 +24,8 @@ const warehouseRoutes = (app: Express) => {
   // app.get("/api/get/warehouse/compare/template", [verifyToken], warehouseControllers.getCompareTemplate);
   // app.post("/api/post/warehouse/compare", [verifyToken], warehouseControllers.postCompare);
 
-  // app.get("/api/get/warehouse/transfer/template", [verifyToken], warehouseControllers.getTransferTemplate);
-  // app.post("/api/post/warehouse/transfer", [verifyToken], warehouseControllers.postWarehouseTransfer);
+  app.get("/api/get/warehouse/transfer/template", [verifyToken], Transfer.getTransferTemplate);
+  app.post("/api/post/warehouse/transfer", [verifyToken], Transfer.postTransfer);
 };
 
 export default warehouseRoutes;
