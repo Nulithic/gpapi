@@ -19,7 +19,7 @@ const getMicroCenterOrders = async (req: Request, res: Response) => {
   const pathName = req.query.pathName;
 
   try {
-    const response = await axios.get(`https://api.spscommerce.com/transactions/v5/data/`, {
+    const response = await axios.get(`https://api.spscommerce.com/transactions/v5/data/${pathName}`, {
       headers: { Authorization: spsToken },
     });
 

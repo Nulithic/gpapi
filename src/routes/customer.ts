@@ -5,7 +5,7 @@ import { MicroCenter } from "controllers/customers";
 
 const customerRoutes = (app: Express) => {
   app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Origin", process.env.ACCESS_CONTROL_ALLOW_ORIGIN);
     res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, x-access-token");
     next();
   });
