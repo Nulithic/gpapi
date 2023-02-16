@@ -14,6 +14,7 @@ import authRoutes from "routes/auth";
 import customerRoutes from "routes/customer";
 import warehouseRoutes from "routes/warehouse";
 import dearRoutes from "routes/dear";
+import logRoutes from "routes/log";
 
 const app = express();
 const port = process.env.PORT;
@@ -43,6 +44,7 @@ authRoutes(app);
 customerRoutes(app);
 warehouseRoutes(app);
 dearRoutes(app);
+logRoutes(app);
 
 io.on("connection", (socket) => {
   const count = io.engine.clientsCount;

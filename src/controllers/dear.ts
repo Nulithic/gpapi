@@ -20,33 +20,35 @@ const updateDearLocations = async (req: Request, res: Response) => {
     const progressMax = locationList.reduce((a, v) => a + v.Bins.length, locationList.length);
     io.to(socketID).emit("updateDearLocationsMax", progressMax);
 
+    await DearModel.DearLocations.deleteMany({});
+
     for (let i = 0; i < locationList.length; i++) {
-      const location = {
+      const location = new DearModel.DearLocations({
         locationID: locationList[i].ID,
         site: locationList[i].Name,
         bin: "",
         location: locationList[i].Name,
-      };
+      });
+      location.save();
 
-      await DearModel.DearLocations.updateOne({ locationID: locationList[i].ID }, { $set: location }, { upsert: true });
       progress = progress + 1;
       io.to(socketID).emit("updateDearLocations", progress);
 
       for (let k = 0; k < locationList[i].Bins.length; k++) {
-        const bin = {
+        const bin = new DearModel.DearLocations({
           locationID: locationList[i].Bins[k].ID,
           site: locationList[i].Name,
           bin: locationList[i].Bins[k].Name,
           location: `${locationList[i].Name}: ${locationList[i].Bins[k].Name}`,
-        };
+        });
+        bin.save();
 
-        await DearModel.DearLocations.updateOne({ locationID: locationList[i].Bins[k].ID }, { $set: bin }, { upsert: true });
         progress = progress + 1;
         io.to(socketID).emit("updateDearLocations", progress);
 
-        await sleep(10);
+        await sleep(1);
       }
-      await sleep(10);
+      await sleep(1);
     }
 
     await LogModel.DearLogs.updateOne(
@@ -73,6 +75,8 @@ const updateDearProducts = async (req: Request, res: Response) => {
     const productListSize = productList.length;
     io.to(socketID).emit("updateDearProductsMax", productListSize);
 
+    await DearModel.DearProducts.deleteMany({});
+
     for (let i = 0; i < productListSize; i++) {
       const priceTiersObject = {
         low: productList[i].PriceTiers["Low"],
@@ -82,7 +86,7 @@ const updateDearProducts = async (req: Request, res: Response) => {
         high: productList[i].PriceTiers["High"],
         flatRate: productList[i].PriceTiers["Flat Rate"],
       };
-      const product = {
+      const product = new DearModel.DearProducts({
         id: productList[i].ID,
         sku: productList[i].SKU,
         name: productList[i].Name,
@@ -162,9 +166,9 @@ const updateDearProducts = async (req: Request, res: Response) => {
         cartonLength: productList[i].CartonLength,
         cartonQuantity: productList[i].CartonQuantity,
         cartonInnerQuantity: productList[i].CartonInnerQuantity,
-      };
+      });
 
-      await DearModel.DearProducts.updateOne({ sku: productList[i].SKU }, { $set: product }, { upsert: true });
+      product.save();
 
       io.to(socketID).emit("updateDearProducts", i + 1);
       await sleep(0);
@@ -192,12 +196,14 @@ const updateDearInventory = async (req: Request, res: Response) => {
     const inventory = await getDearInventoryAPI(io, socketID);
     io.to(socketID).emit("updateDearInventoryMax", inventory.length);
 
+    await DearModel.DearInventory.deleteMany({});
+
     for (let i = 0; i < inventory.length; i++) {
       let dearLocation;
       if (inventory[i].Bin) dearLocation = await DearModel.DearLocations.findOne({ location: `${inventory[i].Location}: ${inventory[i].Bin}` });
       else dearLocation = await DearModel.DearLocations.findOne({ location: inventory[i].Location });
 
-      const stock = {
+      const stock = new DearModel.DearInventory({
         sku: inventory[i].SKU,
         barcode: inventory[i].Barcode,
         name: inventory[i].Name,
@@ -210,11 +216,12 @@ const updateDearInventory = async (req: Request, res: Response) => {
         available: inventory[i].Available,
         onOrder: inventory[i].OnOrder,
         stockOnHand: inventory[i].StockOnHand,
-      };
+      });
 
-      await DearModel.DearInventory.updateOne({ sku: stock.sku, locationID: stock.locationID }, { $set: stock }, { upsert: true });
+      stock.save();
+
       io.to(socketID).emit("updateDearInventory", i + 1);
-      await sleep(10);
+      await sleep(1);
     }
 
     await LogModel.DearLogs.updateOne(
