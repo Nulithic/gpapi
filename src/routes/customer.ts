@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { MicroCenter } from "controllers/customers";
+import { MicroCenter, Walmart } from "controllers/customers";
 
 const customerRoutes = (app: Express) => {
   app.use((req, res, next) => {
@@ -33,11 +33,12 @@ const customerRoutes = (app: Express) => {
   // app.post("/api/post/customer/walgreens/create/order", [verifyToken], customerControllers.postWalgreensOrder);
 
   //Walmart
-  // app.get("/api/get/customer/walmart/orders", [verifyToken], customerControllers.getWalmartOrderList);
-  // app.post("/api/post/customer/walmart/importer/edi", [verifyToken], customerControllers.postWalmartImporterEDI);
-  // app.post("/api/post/customer/walmart/importer/html", [verifyToken], customerControllers.postWalmartImporterHTML);
-  // app.post("/api/post/customer/walmart/importer/tracker", [verifyToken], customerControllers.postWalmartImporterTracker);
-  // app.post("/api/post/customer/walmart/importer/location", [verifyToken], customerControllers.postWalmartImporterLocation);
+  app.get("/api/get/customer/walmart/orders", [verifyToken], Walmart.getWalmartOrders);
+  app.post("/api/post/customer/walmart/import/edi", [verifyToken], Walmart.postWalmartImportEDI);
+  app.post("/api/post/customer/walmart/import/html", [verifyToken], Walmart.postWalmartImportHTML);
+  app.post("/api/post/customer/walmart/import/b2b", [verifyToken], Walmart.postWalmartImportB2B);
+  app.post("/api/post/customer/walmart/import/tracker", [verifyToken], Walmart.postWalmartImportTracker);
+  app.post("/api/post/customer/walmart/import/location", [verifyToken], Walmart.postWalmartImportLocation);
 
   // app.post("/api/post/customer/walmart/order/packing_slip", [verifyToken], customerControllers.postWalmartPackingSlip);
   // app.post("/api/post/customer/walmart/order/underlying_bol", [verifyToken], customerControllers.postWalmartUnderlyingBOL);

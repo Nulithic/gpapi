@@ -1,3 +1,4 @@
 import MicroCenter from "./MicroCenter";
+import Walmart from "./Walmart";
 
-export { MicroCenter };
+export { MicroCenter, Walmart };
