@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 
-import { AuthModel } from "models";
+import { Auth } from "models";
 import { Role } from "types/authTypes";
 
 const createRoleList = (roles: Role[]) => {
@@ -33,7 +33,7 @@ const camelCase = (str: string) => {
 
 const getUsers = async (req: Request, res: Response) => {
   try {
-    const users = await AuthModel.User.find();
+    const users = await Auth.User.find();
     return res.status(200).send({ users: users });
   } catch (err) {
     return res.status(500).send({ message: err });
@@ -42,7 +42,7 @@ const getUsers = async (req: Request, res: Response) => {
 
 const getRoles = async (req: Request, res: Response) => {
   try {
-    const roles = (await AuthModel.Role.find()) as Role[];
+    const roles = (await Auth.Role.find()) as Role[];
     return res.status(200).send({ roles: createRoleList(roles) });
   } catch (err) {
     return res.status(500).send({ message: err });
@@ -51,9 +51,9 @@ const getRoles = async (req: Request, res: Response) => {
 
 const addUser = async (req: Request, res: Response) => {
   try {
-    const roles = (await AuthModel.Role.find()) as Role[];
+    const roles = (await Auth.Role.find()) as Role[];
 
-    const user = new AuthModel.User({
+    const user = new Auth.User({
       username: req.body.username,
       password: bcrypt.hashSync(req.body.password, 8),
       last_login: "",
@@ -64,7 +64,7 @@ const addUser = async (req: Request, res: Response) => {
 
     user.save();
 
-    const users = await AuthModel.User.find({ admin: false }, {});
+    const users = await Auth.User.find({ admin: false }, {});
 
     return res.status(200).send({ message: "User added.", users: users });
   } catch (err) {
@@ -80,7 +80,7 @@ const addRole = async (req: Request, res: Response) => {
 
   const role = camelCase(roleName);
 
-  const checkRoles = (await AuthModel.Role.find()) as Role[];
+  const checkRoles = (await Auth.Role.find()) as Role[];
   for (const item of checkRoles) {
     if (item.role === role && item.parent === parent) return res.status(404).send({ message: "Role already exists." });
   }
@@ -92,7 +92,7 @@ const addRole = async (req: Request, res: Response) => {
       path = `${parentRole.path}/${pathName}`;
     } else path = `/${role}`;
 
-    const newRole = new AuthModel.Role({
+    const newRole = new Auth.Role({
       role: role,
       parent: parent,
       path: path,
@@ -103,9 +103,9 @@ const addRole = async (req: Request, res: Response) => {
 
     newRole.save();
 
-    await AuthModel.User.updateMany({ "roles.role": { $ne: [newRole.role, newRole.parent] } }, { $push: { roles: newRole } });
+    await Auth.User.updateMany({ "roles.role": { $ne: [newRole.role, newRole.parent] } }, { $push: { roles: newRole } });
 
-    const roles = (await AuthModel.Role.find()) as Role[];
+    const roles = (await Auth.Role.find()) as Role[];
     return res.status(200).send({ message: "Role added.", roles: createRoleList(roles) });
   } catch (err) {
     return res.status(500).send({ message: err });
@@ -114,7 +114,7 @@ const addRole = async (req: Request, res: Response) => {
 
 const updateUserRole = async (req: Request, res: Response) => {
   try {
-    const user = await AuthModel.User.findOne({ username: req.body.username });
+    const user = await Auth.User.findOne({ username: req.body.username });
     let userRoles = user.roles;
 
     for (const role of userRoles) {
@@ -124,7 +124,7 @@ const updateUserRole = async (req: Request, res: Response) => {
       }
     }
 
-    const updatedUser = await AuthModel.User.findOneAndUpdate({ username: req.body.username }, { roles: userRoles });
+    const updatedUser = await Auth.User.findOneAndUpdate({ username: req.body.username }, { roles: userRoles });
     const newUser = {
       username: updatedUser.username,
       lastLogin: updatedUser.lastLogin,
@@ -141,8 +141,8 @@ const updateUserRole = async (req: Request, res: Response) => {
 
 const deleteUser = async (req: Request, res: Response) => {
   try {
-    await AuthModel.User.findOneAndDelete({ username: req.body.username });
-    const users = await AuthModel.User.find({ admin: false }, {});
+    await Auth.User.findOneAndDelete({ username: req.body.username });
+    const users = await Auth.User.find({ admin: false }, {});
     return res.status(200).send({ message: "User deleted.", users: users });
   } catch (err) {
     return res.status(500).send({ message: err });
@@ -165,9 +165,9 @@ const deleteRole = async (req: Request, res: Response) => {
 
     addToList(reqRole);
 
-    await AuthModel.Role.deleteMany({ role: roleList, parent: parentList });
+    await Auth.Role.deleteMany({ role: roleList, parent: parentList });
 
-    await AuthModel.User.updateMany(
+    await Auth.User.updateMany(
       {},
       {
         $pull: {
@@ -179,7 +179,7 @@ const deleteRole = async (req: Request, res: Response) => {
       }
     );
 
-    const roles = (await AuthModel.Role.find()) as Role[];
+    const roles = (await Auth.Role.find()) as Role[];
     return res.status(200).send({ message: "Role deleted.", roles: createRoleList(roles) });
   } catch (err) {
     return res.status(500).send({ message: err });

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 
-import { LogModel } from "models";
+import { Logs } from "models";
 import { userAction } from "utilities/userAction";
 
 const getLogs = async (req: Request, res: Response) => {
@@ -8,7 +8,7 @@ const getLogs = async (req: Request, res: Response) => {
     userAction(req.body.user, "getLog");
 
     const id = req.query.logID;
-    const log = await LogModel.DearLogs.findOne({ id: id });
+    const log = await Logs.DearLogs.findOne({ id: id });
 
     res.status(200).send(log);
   } catch (err) {

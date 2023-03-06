@@ -3,7 +3,7 @@ import { Server } from "socket.io";
 
 import { userAction } from "utilities/userAction";
 import { getDearProductsAPI, getDearLocationsAPI, getDearInventoryAPI } from "api/DearSystems";
-import { DearModel, LogModel } from "models";
+import { Dear, Logs } from "models";
 
 import sleep from "utilities/sleep";
 
@@ -20,10 +20,10 @@ const updateDearLocations = async (req: Request, res: Response) => {
     const progressMax = locationList.reduce((a, v) => a + v.Bins.length, locationList.length);
     io.to(socketID).emit("updateDearLocationsMax", progressMax);
 
-    await DearModel.DearLocations.deleteMany({});
+    await Dear.DearLocations.deleteMany({});
 
     for (let i = 0; i < locationList.length; i++) {
-      const location = new DearModel.DearLocations({
+      const location = new Dear.DearLocations({
         locationID: locationList[i].ID,
         site: locationList[i].Name,
         bin: "",
@@ -35,7 +35,7 @@ const updateDearLocations = async (req: Request, res: Response) => {
       io.to(socketID).emit("updateDearLocations", progress);
 
       for (let k = 0; k < locationList[i].Bins.length; k++) {
-        const bin = new DearModel.DearLocations({
+        const bin = new Dear.DearLocations({
           locationID: locationList[i].Bins[k].ID,
           site: locationList[i].Name,
           bin: locationList[i].Bins[k].Name,
@@ -51,7 +51,7 @@ const updateDearLocations = async (req: Request, res: Response) => {
       await sleep(1);
     }
 
-    await LogModel.DearLogs.updateOne(
+    await Logs.DearLogs.updateOne(
       { id: "updateDearLocations" },
       { id: "updateDearLocations", lastUpdated: new Date().toLocaleString("en-US"), updatedBy: req.body.user },
       { upsert: true }
@@ -75,7 +75,7 @@ const updateDearProducts = async (req: Request, res: Response) => {
     const productListSize = productList.length;
     io.to(socketID).emit("updateDearProductsMax", productListSize);
 
-    await DearModel.DearProducts.deleteMany({});
+    await Dear.DearProducts.deleteMany({});
 
     for (let i = 0; i < productListSize; i++) {
       const priceTiersObject = {
@@ -86,7 +86,7 @@ const updateDearProducts = async (req: Request, res: Response) => {
         high: productList[i].PriceTiers["High"],
         flatRate: productList[i].PriceTiers["Flat Rate"],
       };
-      const product = new DearModel.DearProducts({
+      const product = new Dear.DearProducts({
         id: productList[i].ID,
         sku: productList[i].SKU,
         name: productList[i].Name,
@@ -174,7 +174,7 @@ const updateDearProducts = async (req: Request, res: Response) => {
       await sleep(0);
     }
 
-    await LogModel.DearLogs.updateOne(
+    await Logs.DearLogs.updateOne(
       { id: "updateDearProducts" },
       { id: "updateDearProducts", lastUpdated: new Date().toLocaleString("en-US"), updatedBy: req.body.user },
       { upsert: true }
@@ -196,14 +196,14 @@ const updateDearInventory = async (req: Request, res: Response) => {
     const inventory = await getDearInventoryAPI(io, socketID);
     io.to(socketID).emit("updateDearInventoryMax", inventory.length);
 
-    await DearModel.DearInventory.deleteMany({});
+    await Dear.DearInventory.deleteMany({});
 
     for (let i = 0; i < inventory.length; i++) {
       let dearLocation;
-      if (inventory[i].Bin) dearLocation = await DearModel.DearLocations.findOne({ location: `${inventory[i].Location}: ${inventory[i].Bin}` });
-      else dearLocation = await DearModel.DearLocations.findOne({ location: inventory[i].Location });
+      if (inventory[i].Bin) dearLocation = await Dear.DearLocations.findOne({ location: `${inventory[i].Location}: ${inventory[i].Bin}` });
+      else dearLocation = await Dear.DearLocations.findOne({ location: inventory[i].Location });
 
-      const stock = new DearModel.DearInventory({
+      const stock = new Dear.DearInventory({
         sku: inventory[i].SKU,
         barcode: inventory[i].Barcode,
         name: inventory[i].Name,
@@ -224,7 +224,7 @@ const updateDearInventory = async (req: Request, res: Response) => {
       await sleep(1);
     }
 
-    await LogModel.DearLogs.updateOne(
+    await Logs.DearLogs.updateOne(
       { id: "updateDearInventory" },
       { id: "updateDearInventory", lastUpdated: new Date().toLocaleString("en-US"), updatedBy: req.body.user },
       { upsert: true }
@@ -240,7 +240,7 @@ const updateDearInventory = async (req: Request, res: Response) => {
 const getDearLocations = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "getDearLocations");
-    const locations = await DearModel.DearLocations.find();
+    const locations = await Dear.DearLocations.find();
     res.status(200).send(locations);
   } catch (err) {
     res.status(500).send(err);
@@ -249,7 +249,7 @@ const getDearLocations = async (req: Request, res: Response) => {
 const getDearProducts = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "getDearProducts");
-    const products = await DearModel.DearProducts.find();
+    const products = await Dear.DearProducts.find();
     res.status(200).send(products);
   } catch (err) {
     res.status(500).send(err);
@@ -258,7 +258,7 @@ const getDearProducts = async (req: Request, res: Response) => {
 const getDearInventory = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "getDearInventory");
-    const inventory = await DearModel.DearInventory.find();
+    const inventory = await Dear.DearInventory.find();
     res.status(200).send(inventory);
   } catch (err) {
     res.status(500).send(err);

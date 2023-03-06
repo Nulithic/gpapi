@@ -1,3 +1,5 @@
+import { StediPurchaseOrder } from "./Stedi/walmart850";
+
 export interface WalmartTracker {
   purchaseOrderNumber: string;
   actualWeight: string;
@@ -21,3 +23,5 @@ export interface WalmartTracker {
   saleOrderNumber: string;
   shipDateScheduled: string;
 }
+
+export interface WalmartOrder extends StediPurchaseOrder, WalmartTracker {}

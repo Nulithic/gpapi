@@ -1,8 +1,7 @@
-import AuthModel from "./AuthModel";
-import DearModel from "./DearModel";
-import WarehouseModel from "./WarehouseModel";
-// import CustomerModel from "./CustomerModel";
-import LogModel from "./LogModel";
+import Auth from "./Auth";
+import Dear from "./Dear";
+import Warehouse from "./Warehouse";
+import Customers from "./Customers";
+import Logs from "./Logs";
 
-// export { AuthModel, LogModel, DearModel, CustomerModel, WarehouseModel };
-export { AuthModel, WarehouseModel, DearModel, LogModel };
+export { Auth, Logs, Dear, Customers, Warehouse };

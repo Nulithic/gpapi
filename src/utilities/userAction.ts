@@ -1,4 +1,4 @@
-import { LogModel } from "models";
+import { Logs } from "models";
 
 export const userAction = async (user: string, action: string) => {
   console.log(`User: ${user} | Date: ${new Date().toLocaleString()} | Action: ${action}`);
@@ -8,7 +8,7 @@ export const userAction = async (user: string, action: string) => {
       date: new Date().toLocaleString(),
       action: action,
     };
-    new LogModel.UserLogs(userLog).save();
+    new Logs.UserLogs(userLog).save();
   } catch (err) {
     console.log(err);
   }
