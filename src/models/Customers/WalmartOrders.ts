@@ -1,98 +1,134 @@
 import mongoose from "mongoose";
 
-const TransactionSetHeaderST = new mongoose.Schema({
-  transactionSetIdentifierCode01: String,
-  transactionSetControlNumber02: Number,
-});
+const TransactionSetHeaderST = new mongoose.Schema(
+  {
+    transactionSetIdentifierCode01: String,
+    transactionSetControlNumber02: Number,
+  },
+  { _id: false }
+);
 
-const BeginningSegmentForPurchaseOrderBEG = new mongoose.Schema({
-  transactionSetPurposeCode01: String,
-  purchaseOrderTypeCode02: String,
-  purchaseOrderNumber03: String,
-  date05: String,
-});
-const CurrencyCUR = new mongoose.Schema({ entityIdentifierCode01: String, currencyCode02: String });
+const BeginningSegmentForPurchaseOrderBEG = new mongoose.Schema(
+  {
+    transactionSetPurposeCode01: String,
+    purchaseOrderTypeCode02: String,
+    purchaseOrderNumber03: String,
+    date05: String,
+  },
+  { _id: false }
+);
+const CurrencyCUR = new mongoose.Schema({ entityIdentifierCode01: String, currencyCode02: String }, { _id: false });
 
-const ReferenceInformationRef = new mongoose.Schema({ referenceIdentificationQualifier01: String, referenceIdentification02: String });
-const FobRelatedInstructionsFOB = new mongoose.Schema({ shipmentMethodOfPayment01: String, locationQualifier02: String, description03: String });
+const ReferenceInformationRef = new mongoose.Schema({ referenceIdentificationQualifier01: String, referenceIdentification02: String }, { _id: false });
+const FobRelatedInstructionsFOB = new mongoose.Schema(
+  { shipmentMethodOfPayment01: String, locationQualifier02: String, description03: String },
+  { _id: false }
+);
 
-const ServicePromotionAllowanceOrChargeInformationSAC = new mongoose.Schema({
-  allowanceOrChargeIndicator01: String,
-  servicePromotionAllowanceOrChargeCode02: String,
-  amount05: Number,
-  allowanceChargePercentQualifier06: String,
-  percentDecimalFormat07: Number,
-  allowanceOrChargeMethodOfHandlingCode12: String,
-});
-const ServicePromotionAllowanceOrChargeInformationSACLoop = new mongoose.Schema({
-  servicePromotionAllowanceOrChargeInformationSAC: ServicePromotionAllowanceOrChargeInformationSAC,
-});
+const ServicePromotionAllowanceOrChargeInformationSAC = new mongoose.Schema(
+  {
+    allowanceOrChargeIndicator01: String,
+    servicePromotionAllowanceOrChargeCode02: String,
+    amount05: Number,
+    allowanceChargePercentQualifier06: String,
+    percentDecimalFormat07: Number,
+    allowanceOrChargeMethodOfHandlingCode12: String,
+  },
+  { _id: false }
+);
+const ServicePromotionAllowanceOrChargeInformationSACLoop = new mongoose.Schema(
+  {
+    servicePromotionAllowanceOrChargeInformationSAC: ServicePromotionAllowanceOrChargeInformationSAC,
+  },
+  { _id: false }
+);
 
-const TermsOfSaleDeferredTermsOfSaleITD = new mongoose.Schema({
-  termsTypeCode01: String,
-  termsBasisDateCode02: String,
-  termsDiscountPercent03: Number,
-  termsDiscountDaysDue05: Number,
-  termsNetDays07: Number,
-});
+const TermsOfSaleDeferredTermsOfSaleITD = new mongoose.Schema(
+  {
+    termsTypeCode01: String,
+    termsBasisDateCode02: String,
+    termsDiscountPercent03: Number,
+    termsDiscountDaysDue05: Number,
+    termsNetDays07: Number,
+  },
+  { _id: false }
+);
 
-const DateTimeReferenceDTM = new mongoose.Schema({ dateTimeQualifier01: String, date02: String });
-const CarrierDetailsRoutingSequenceTransitTimeTD5 = new mongoose.Schema({ routingSequenceCode01: String, routing05: String });
+const DateTimeReferenceDTM = new mongoose.Schema({ dateTimeQualifier01: String, date02: String }, { _id: false });
+const CarrierDetailsRoutingSequenceTransitTimeTD5 = new mongoose.Schema({ routingSequenceCode01: String, routing05: String }, { _id: false });
 
-const TextMTX = new mongoose.Schema({ textualData02: String });
-const ExtendedReferenceInformationN9Loop = new mongoose.Schema({ extendedReferenceInformationN9: ReferenceInformationRef, textMTX: [TextMTX] });
+const TextMTX = new mongoose.Schema({ textualData02: String }, { _id: false });
+const ExtendedReferenceInformationN9Loop = new mongoose.Schema({ extendedReferenceInformationN9: ReferenceInformationRef, textMTX: [TextMTX] }, { _id: false });
 
-const PartyIdentificationN1 = new mongoose.Schema({
-  entityIdentifierCode01: String,
-  name02: String,
-  identificationCodeQualifier03: String,
-  identificationCode04: String,
-});
-const PartyLocationN3 = new mongoose.Schema({ addressInformation01: String });
-const GeographicLocationN4 = new mongoose.Schema({ cityName01: String, stateOrProvinceCode02: String, postalCode03: String, countryCode04: String });
+const PartyIdentificationN1 = new mongoose.Schema(
+  {
+    entityIdentifierCode01: String,
+    name02: String,
+    identificationCodeQualifier03: String,
+    identificationCode04: String,
+  },
+  { _id: false }
+);
+const PartyLocationN3 = new mongoose.Schema({ addressInformation01: String }, { _id: false });
+const GeographicLocationN4 = new mongoose.Schema(
+  { cityName01: String, stateOrProvinceCode02: String, postalCode03: String, countryCode04: String },
+  { _id: false }
+);
 
-const PartyIdentificationN1Loop = new mongoose.Schema({
-  partyIdentificationN1: PartyIdentificationN1,
-  partyLocationN3: [PartyLocationN3],
-  geographicLocationN4: [GeographicLocationN4],
-});
+const PartyIdentificationN1Loop = new mongoose.Schema(
+  {
+    partyIdentificationN1: PartyIdentificationN1,
+    partyLocationN3: [PartyLocationN3],
+    geographicLocationN4: [GeographicLocationN4],
+  },
+  { _id: false }
+);
 
-const BaselineItemDataPO1 = new mongoose.Schema({
-  assignedIdentification01: String,
-  quantity02: Number,
-  unitOrBasisForMeasurementCode03: String,
-  unitPrice04: Number,
-  basisOfUnitPriceCode05: String,
-  productServiceIdQualifier06: String,
-  productServiceId07: String,
-  productServiceIdQualifier08: String,
-  productServiceId09: String,
-  productServiceIdQualifier10: String,
-  productServiceId11: String,
-  productServiceIdQualifier14: String,
-  productServiceId15: String,
-  productServiceIdQualifier22: String,
-  productServiceId23: String,
-  productServiceIdQualifier12: String,
-  productServiceId13: String,
-});
-const ItemPhysicalDetailsPO4 = new mongoose.Schema({ pack01: Number, innerPack14: Number });
+const BaselineItemDataPO1 = new mongoose.Schema(
+  {
+    assignedIdentification01: String,
+    quantity02: Number,
+    unitOrBasisForMeasurementCode03: String,
+    unitPrice04: Number,
+    basisOfUnitPriceCode05: String,
+    productServiceIdQualifier06: String,
+    productServiceId07: String,
+    productServiceIdQualifier08: String,
+    productServiceId09: String,
+    productServiceIdQualifier10: String,
+    productServiceId11: String,
+    productServiceIdQualifier14: String,
+    productServiceId15: String,
+    productServiceIdQualifier22: String,
+    productServiceId23: String,
+    productServiceIdQualifier12: String,
+    productServiceId13: String,
+  },
+  { _id: false }
+);
+const ItemPhysicalDetailsPO4 = new mongoose.Schema({ pack01: Number, innerPack14: Number }, { _id: false });
 
-const MonetaryAmountInformationAMT = new mongoose.Schema({ amountQualifierCode01: String, monetaryAmount02: Number });
-const MonetaryAmountInformationAMTLoop = new mongoose.Schema({ monetaryAmountInformationAMT: MonetaryAmountInformationAMT });
-const BaselineItemDataPO1Loop = new mongoose.Schema({
-  baselineItemDataPO1: BaselineItemDataPO1,
-  itemPhysicalDetailsPO4: [ItemPhysicalDetailsPO4],
-  monetaryAmountInformationAMTLoop: [MonetaryAmountInformationAMTLoop],
-});
+const MonetaryAmountInformationAMT = new mongoose.Schema({ amountQualifierCode01: String, monetaryAmount02: Number }, { _id: false });
+const MonetaryAmountInformationAMTLoop = new mongoose.Schema({ monetaryAmountInformationAMT: MonetaryAmountInformationAMT }, { _id: false });
+const BaselineItemDataPO1Loop = new mongoose.Schema(
+  {
+    baselineItemDataPO1: BaselineItemDataPO1,
+    itemPhysicalDetailsPO4: [ItemPhysicalDetailsPO4],
+    monetaryAmountInformationAMTLoop: [MonetaryAmountInformationAMTLoop],
+  },
+  { _id: false }
+);
 
-const TransactionTotalsCTT = new mongoose.Schema({ numberOfLineItems01: Number });
-const TransactionTotalsCTTLoop = new mongoose.Schema({
-  transactionTotalsCTT: TransactionTotalsCTT,
-  monetaryAmountInformationAMT: MonetaryAmountInformationAMT,
-});
+const TransactionTotalsCTT = new mongoose.Schema({ numberOfLineItems01: Number }, { _id: false });
+const TransactionTotalsCTTLoop = new mongoose.Schema(
+  {
+    transactionTotalsCTT: TransactionTotalsCTT,
+    monetaryAmountInformationAMT: MonetaryAmountInformationAMT,
+  },
+  { _id: false }
+);
 
-const TransactionSetTrailerSE = new mongoose.Schema({ numberOfIncludedSegments01: Number, transactionSetControlNumber02: Number });
+const TransactionSetTrailerSE = new mongoose.Schema({ numberOfIncludedSegments01: Number, transactionSetControlNumber02: Number }, { _id: false });
 
 const WalmartOrders = mongoose.model(
   "WalmartOrders",
