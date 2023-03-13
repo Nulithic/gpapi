@@ -12,7 +12,15 @@ const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[])
     return acc;
   }, {} as { [key: string]: T[] });
 
-const getWalmartOrders = (req: Request, res: Response) => {};
+const getWalmartOrders = async (req: Request, res: Response) => {
+  try {
+    const orderList = await Customers.WalmartOrders.find();
+
+    res.status(200).send(orderList);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+};
 
 const postWalmartImportEDI = async (req: Request, res: Response) => {
   try {

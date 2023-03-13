@@ -24,7 +24,11 @@ export interface WalmartTrackerFile {
   NMFC: string;
 }
 export interface WalmartTracker {
+  purchaseOrderDate: string;
   purchaseOrderNumber: string;
+  distributionCenterNumber: string;
+  purchaseOrderType: string;
+  purchaseOrderEventCode: string;
   actualWeight: string;
   billOfLading: string;
   carrierSCAC: string;
@@ -39,12 +43,26 @@ export interface WalmartTracker {
   loadDestination: string;
   mustArriveByDate: string;
   numberOfCartons: string;
-  distributionCenterNumber: string;
-  purchaseOrderDate: string;
-  purchaseOrderType: string;
-  purchaseOrderEventCode: string;
   saleOrderNumber: string;
   shipDateScheduled: string;
 }
 
-export interface WalmartOrder extends StediPurchaseOrder, WalmartTracker {}
+export interface WalmartTrackerExtras {
+  shipNoLater: string;
+  shipNotBefore: string;
+  doNotDeliverAfter: string;
+  fobMethodOfPayment: string;
+  fobPaymentLocation: string;
+  buyingParty: string;
+  buyingPartyGLN: string;
+  buyingPartyStreet: string;
+  buyingPartyCity: string;
+  buyingPartyStateOrProvince: string;
+  buyingPartyPostalCode: string;
+  buyingPartyCountry: string;
+  departmentNumber: string;
+  internalVendorNumber: string;
+  grossValue: string;
+}
+
+export interface WalmartOrder extends StediPurchaseOrder, WalmartTracker, WalmartTrackerExtras {}

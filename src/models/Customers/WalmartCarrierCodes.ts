@@ -1,15 +1,15 @@
 import mongoose from "mongoose";
 
 const CarrierCodes = mongoose.model(
-  "carrier_codes",
+  "WalmartCarrierCodes",
   new mongoose.Schema(
     {
-      scac_code: String,
-      company_name: String,
+      scac: String,
+      company: String,
     },
     { versionKey: false }
   ),
-  "carrier_codes"
+  "WalmartCarrierCodes"
 );
 
 export default CarrierCodes;
