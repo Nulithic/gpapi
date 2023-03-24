@@ -47,7 +47,7 @@ export interface WalmartTracker {
   shipDateScheduled: string;
 }
 
-export interface WalmartTrackerExtras {
+export interface WalmartTable {
   shipNoLater: string;
   shipNotBefore: string;
   doNotDeliverAfter: string;
@@ -63,6 +63,7 @@ export interface WalmartTrackerExtras {
   departmentNumber: string;
   internalVendorNumber: string;
   grossValue: string;
+  archived: string;
 }
 
-export interface WalmartOrder extends StediPurchaseOrder, WalmartTracker, WalmartTrackerExtras {}
+export interface WalmartOrder extends StediPurchaseOrder, WalmartTracker, WalmartTable {}

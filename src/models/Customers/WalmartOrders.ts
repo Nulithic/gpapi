@@ -184,6 +184,7 @@ const WalmartOrders = mongoose.model(
       numberOfCartons: String,
       saleOrderNumber: String,
       shipDateScheduled: String,
+      archived: String,
     },
     { versionKey: false }
   ),

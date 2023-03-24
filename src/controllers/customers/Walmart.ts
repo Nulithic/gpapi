@@ -5,6 +5,7 @@ import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
 import { WalmartOrder, WalmartTrackerFile } from "types/walmartTypes";
 import { userAction } from "utilities/userAction";
+import axios from "axios";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {
@@ -14,7 +15,24 @@ const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[])
 
 const getWalmartOrders = async (req: Request, res: Response) => {
   try {
-    const orderList = await Customers.WalmartOrders.find();
+    const option = req.query.option;
+    console.log(option);
+    const response = await Customers.WalmartOrders.find();
+    let orderList;
+
+    switch (option) {
+      case "All Orders":
+        orderList = response;
+        break;
+      case "Active Orders":
+        orderList = response.filter((item) => item.archived === "No");
+        break;
+      case "Archived Orders":
+        orderList = response.filter((item) => item.archived === "Yes");
+        break;
+      default:
+        break;
+    }
 
     res.status(200).send(orderList);
   } catch (err) {
@@ -158,4 +176,33 @@ const postWalmartImportTracker = async (req: Request, res: Response) => {
 };
 const postWalmartImportLocation = (req: Request, res: Response) => {};
 
-export default { getWalmartOrders, postWalmartImportEDI, postWalmartImportHTML, postWalmartImportB2B, postWalmartImportTracker, postWalmartImportLocation };
+const postWalmartArchiveOrder = async (req: Request, res: Response) => {
+  const list = req.body.data as WalmartOrder[];
+  try {
+    for (const item of list) {
+      await Customers.WalmartOrders.findOneAndUpdate({ purchaseOrderNumber: item.purchaseOrderNumber }, { archived: "Yes" });
+    }
+    res.status(200).send("Archive Completed.");
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+
+const postWalmartPackingList = async (req: Request, res: Response) => {
+  const selection = req.body.selection;
+  console.log(selection);
+
+  res.status(200).send();
+};
+
+export default {
+  getWalmartOrders,
+  postWalmartImportEDI,
+  postWalmartImportHTML,
+  postWalmartImportB2B,
+  postWalmartImportTracker,
+  postWalmartImportLocation,
+  postWalmartArchiveOrder,
+  postWalmartPackingList,
+};
