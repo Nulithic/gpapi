@@ -42,7 +42,7 @@ const customerRoutes = (app: Express) => {
 
   app.post("/api/post/customer/walmart/order/archive", [verifyToken], Walmart.postWalmartArchiveOrder);
 
-  app.post("/api/post/customer/walmart/order/packing_list", [verifyToken], Walmart.postWalmartPackingList);
+  // app.post("/api/post/customer/walmart/order/packing_list", [verifyToken], Walmart.postWalmartPackingList);
   // app.post("/api/post/customer/walmart/order/underlying_bol", [verifyToken], customerControllers.postWalmartUnderlyingBOL);
   // app.post("/api/post/customer/walmart/order/master_bol", [verifyToken], customerControllers.postWalmartMasterBOL);
 };

@@ -34,7 +34,17 @@ const getWalmartOrders = async (req: Request, res: Response) => {
         break;
     }
 
-    res.status(200).send(orderList);
+    const carrierResponse = await Customers.WalmartCarrierCodes.find();
+
+    const getCarrierName = (order: any) => {
+      const name = carrierResponse.find((carrier) => carrier.scac === order.carrierSCAC);
+      if (!name) return "";
+      return name.company;
+    };
+
+    const newList = orderList.map((order) => ({ ...order.toObject(), carrierName: getCarrierName(order) }));
+
+    res.status(200).send(newList);
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -189,13 +199,6 @@ const postWalmartArchiveOrder = async (req: Request, res: Response) => {
   }
 };
 
-const postWalmartPackingList = async (req: Request, res: Response) => {
-  const selection = req.body.selection;
-  console.log(selection);
-
-  res.status(200).send();
-};
-
 export default {
   getWalmartOrders,
   postWalmartImportEDI,
@@ -204,5 +207,4 @@ export default {
   postWalmartImportTracker,
   postWalmartImportLocation,
   postWalmartArchiveOrder,
-  postWalmartPackingList,
 };
