@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { MicroCenter, Walmart } from "controllers/customers";
+import { MicroCenter, Walmart, HSN } from "controllers/customers";
 
 const customerRoutes = (app: Express) => {
   app.use((req, res, next) => {
@@ -45,6 +45,8 @@ const customerRoutes = (app: Express) => {
   // app.post("/api/post/customer/walmart/order/packing_list", [verifyToken], Walmart.postWalmartPackingList);
   // app.post("/api/post/customer/walmart/order/underlying_bol", [verifyToken], customerControllers.postWalmartUnderlyingBOL);
   // app.post("/api/post/customer/walmart/order/master_bol", [verifyToken], customerControllers.postWalmartMasterBOL);
+
+  app.post("/api/post/customer/hsn/import", [verifyToken], HSN.postHSNImport);
 };
 
 export default customerRoutes;

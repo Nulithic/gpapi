@@ -5,7 +5,6 @@ import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
 import { WalmartOrder, WalmartTrackerFile } from "types/walmartTypes";
 import { userAction } from "utilities/userAction";
-import axios from "axios";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {

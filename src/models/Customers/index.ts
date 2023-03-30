@@ -5,6 +5,8 @@ import WalmartOrders from "./WalmartOrders";
 import WalmartLocations from "./WalmartLocations";
 import WalmartCarrierCodes from "./WalmartCarrierCodes";
 
+import HSNPriceList from "./HSNPriceList";
+
 export default {
   // InkTechOrders,
   // InkTechProducts,
@@ -12,4 +14,5 @@ export default {
   WalmartOrders,
   WalmartLocations,
   WalmartCarrierCodes,
+  HSNPriceList,
 };

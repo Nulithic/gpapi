@@ -165,4 +165,45 @@ const postDearStockTransferAPI = async (transfer: any, io: any, socketID: string
     });
 };
 
-export { getDearProductsAPI, getDearLocationsAPI, getDearInventoryAPI, getDearSaleOrderAPI, postDearSaleFulfilmentShipAPI, postDearStockTransferAPI };
+const postDearSaleOrderAPI = async (saleOrder: any, io: any, socketID: string) => {
+  try {
+    const res = await axios.post("https://inventory.dearsystems.com/ExternalApi/v2/sale", saleOrder, {
+      headers: headers,
+    });
+
+    io.to(socketID).emit("postDearSaleOrderAPI", res.data);
+
+    return res.data;
+  } catch (e) {
+    console.log(`DEAR API error (postDearSaleOrderAPI) - ${e}`);
+    io.to(socketID).emit("postDearSaleOrderAPI", `Order Ref: ${saleOrder.CustomerReference} | DEAR API error (dearSaleOrder) - ${e}`);
+    return null;
+  }
+};
+
+const postDearSaleOrderLinesAPI = async (saleOrderLines: any, io: any, socketID: string) => {
+  try {
+    const res = await axios.post("https://inventory.dearsystems.com/ExternalApi/v2/sale/order", saleOrderLines, {
+      headers: headers,
+    });
+
+    io.to(socketID).emit("postDearSaleOrderLinesAPI", res.data);
+
+    return res.data;
+  } catch (e) {
+    console.log(`DEAR API error (postDearSaleOrderLinesAPI) - ${e}`);
+    io.to(socketID).emit("postDearSaleOrderLinesAPI", `SaleID: ${saleOrderLines.SaleID} DEAR API error (postDearSaleOrderLinesAPI) - ${e}`);
+    return null;
+  }
+};
+
+export {
+  getDearProductsAPI,
+  getDearLocationsAPI,
+  getDearInventoryAPI,
+  getDearSaleOrderAPI,
+  postDearSaleFulfilmentShipAPI,
+  postDearStockTransferAPI,
+  postDearSaleOrderAPI,
+  postDearSaleOrderLinesAPI,
+};
