@@ -41,7 +41,20 @@ const getWalmartOrders = async (req: Request, res: Response) => {
       return name.company;
     };
 
-    const newList = orderList.map((order) => ({ ...order.toObject(), carrierName: getCarrierName(order) }));
+    const locationResponse = await Customers.WalmartLocations.find();
+    const getDistributionCenterName = (order: any) => {
+      const dc = locationResponse.filter(
+        (location) => location.addressType === "2 GENERAL DC MERCHANDISE" && location.storeNumber === order.distributionCenterNumber
+      );
+      if (dc.length === 0) return "";
+      return dc[0].addressLine1;
+    };
+
+    const newList = orderList.map((order) => ({
+      ...order.toObject(),
+      carrierName: getCarrierName(order),
+      distributionCenterName: getDistributionCenterName(order),
+    }));
 
     res.status(200).send(newList);
   } catch (err) {
@@ -156,7 +169,7 @@ const postWalmartImportTracker = async (req: Request, res: Response) => {
         billOfLading: item.BOL.toString(),
         carrierSCAC: item["Carrier SCAC"],
         carrierReference: item["Carrier Reference"].toString(),
-        class: item.Class.toString(),
+        carrierClass: item.Class.toString(),
         nmfc: item.NMFC,
         floorOrPallet: item["Floor or Pallet"],
         height: item.Height.toString(),
