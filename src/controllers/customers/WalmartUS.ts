@@ -3,7 +3,7 @@ import { Translate, Walmart850Mapping } from "api/Stedi";
 import { format, parseISO } from "date-fns";
 import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
-import { WalmartOrder, WalmartTrackerFile } from "types/walmartTypes";
+import { WalmartOrder, WalmartTrackerFile } from "types/WalmartUS/walmartTypes";
 import { userAction } from "utilities/userAction";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
@@ -12,11 +12,11 @@ const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[])
     return acc;
   }, {} as { [key: string]: T[] });
 
-const getWalmartOrders = async (req: Request, res: Response) => {
+const getWalmartUSOrders = async (req: Request, res: Response) => {
   try {
     const option = req.query.option;
     console.log(option);
-    const response = await Customers.WalmartOrders.find();
+    const response = await Customers.WalmartUSOrders.find();
     let orderList;
 
     switch (option) {
@@ -41,7 +41,7 @@ const getWalmartOrders = async (req: Request, res: Response) => {
       return name.company;
     };
 
-    const locationResponse = await Customers.WalmartLocations.find();
+    const locationResponse = await Customers.WalmartUSLocations.find();
     const getDistributionCenterName = (order: any) => {
       const dc = locationResponse.filter(
         (location) => location.addressType === "2 GENERAL DC MERCHANDISE" && location.storeNumber === order.distributionCenterNumber
@@ -62,7 +62,7 @@ const getWalmartOrders = async (req: Request, res: Response) => {
   }
 };
 
-const postWalmartImportEDI = async (req: Request, res: Response) => {
+const postWalmartUSImportEDI = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postWalmartImportEDI");
 
@@ -71,7 +71,7 @@ const postWalmartImportEDI = async (req: Request, res: Response) => {
     const data = await Walmart850Mapping(translationData);
 
     for (const item of data) {
-      await Customers.WalmartOrders.updateOne({ purchaseOrderNumber: item.purchaseOrderNumber }, item, { upsert: true });
+      await Customers.WalmartUSOrders.updateOne({ purchaseOrderNumber: item.purchaseOrderNumber }, item, { upsert: true });
     }
 
     res.status(200).send(data);
@@ -79,7 +79,7 @@ const postWalmartImportEDI = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const postWalmartImportHTML = (req: Request, res: Response) => {
+const postWalmartUSImportHTML = (req: Request, res: Response) => {
   try {
     const dataHTML = req.body.dataHTML;
     console.log(dataHTML);
@@ -88,7 +88,7 @@ const postWalmartImportHTML = (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const postWalmartImportB2B = async (req: Request, res: Response) => {
+const postWalmartUSImportB2B = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postWalmartImportB2B");
 
@@ -140,7 +140,7 @@ const postWalmartImportB2B = async (req: Request, res: Response) => {
 
     // save JSON to database
     for (const item of translationList.flat()) {
-      await Customers.WalmartOrders.updateOne({ purchaseOrderNumber: item.purchaseOrderNumber }, item, { upsert: true });
+      await Customers.WalmartUSOrders.updateOne({ purchaseOrderNumber: item.purchaseOrderNumber }, item, { upsert: true });
     }
 
     io.to(socketID).emit("postWalmartImportB2B", "Import completed.");
@@ -151,7 +151,7 @@ const postWalmartImportB2B = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const postWalmartImportTracker = async (req: Request, res: Response) => {
+const postWalmartUSImportTracker = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postWalmartImportTracker");
     const dataTracker = req.body.dataTracker as WalmartTrackerFile[];
@@ -187,7 +187,7 @@ const postWalmartImportTracker = async (req: Request, res: Response) => {
         shipDateScheduled: shipDateScheduled,
       };
       trackerList.push(tracker);
-      await Customers.WalmartOrders.updateOne({ purchaseOrderNumber: item.PO }, tracker, { upsert: true });
+      await Customers.WalmartUSOrders.updateOne({ purchaseOrderNumber: item.PO }, tracker, { upsert: true });
     }
 
     res.status(200).send(trackerList);
@@ -196,13 +196,12 @@ const postWalmartImportTracker = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const postWalmartImportLocation = (req: Request, res: Response) => {};
-
-const postWalmartArchiveOrder = async (req: Request, res: Response) => {
+const postWalmartUSImportLocation = (req: Request, res: Response) => {};
+const postWalmartUSArchiveOrder = async (req: Request, res: Response) => {
   const list = req.body.data as WalmartOrder[];
   try {
     for (const item of list) {
-      await Customers.WalmartOrders.findOneAndUpdate({ purchaseOrderNumber: item.purchaseOrderNumber }, { archived: "Yes" });
+      await Customers.WalmartUSOrders.findOneAndUpdate({ purchaseOrderNumber: item.purchaseOrderNumber }, { archived: "Yes" });
     }
     res.status(200).send("Archive Completed.");
   } catch (err) {
@@ -212,11 +211,11 @@ const postWalmartArchiveOrder = async (req: Request, res: Response) => {
 };
 
 export default {
-  getWalmartOrders,
-  postWalmartImportEDI,
-  postWalmartImportHTML,
-  postWalmartImportB2B,
-  postWalmartImportTracker,
-  postWalmartImportLocation,
-  postWalmartArchiveOrder,
+  getWalmartUSOrders,
+  postWalmartUSImportEDI,
+  postWalmartUSImportHTML,
+  postWalmartUSImportB2B,
+  postWalmartUSImportTracker,
+  postWalmartUSImportLocation,
+  postWalmartUSArchiveOrder,
 };

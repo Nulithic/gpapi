@@ -1,5 +1,5 @@
 import MicroCenter from "./MicroCenter";
-import Walmart from "./Walmart";
+import WalmartUS from "./WalmartUS";
 import HSN from "./HSN";
 
-export { MicroCenter, Walmart, HSN };
+export { MicroCenter, WalmartUS, HSN };

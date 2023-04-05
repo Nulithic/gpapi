@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { MicroCenter, Walmart, HSN } from "controllers/customers";
+import { MicroCenter, WalmartUS, HSN } from "controllers/customers";
 
 const customerRoutes = (app: Express) => {
   app.use((req, res, next) => {
@@ -33,18 +33,13 @@ const customerRoutes = (app: Express) => {
   // app.post("/api/post/customer/walgreens/create/order", [verifyToken], customerControllers.postWalgreensOrder);
 
   //Walmart
-  app.get("/api/get/customer/walmart/orders", [verifyToken], Walmart.getWalmartOrders);
-  app.post("/api/post/customer/walmart/import/edi", [verifyToken], Walmart.postWalmartImportEDI);
-  app.post("/api/post/customer/walmart/import/html", [verifyToken], Walmart.postWalmartImportHTML);
-  app.post("/api/post/customer/walmart/import/b2b", [verifyToken], Walmart.postWalmartImportB2B);
-  app.post("/api/post/customer/walmart/import/tracker", [verifyToken], Walmart.postWalmartImportTracker);
-  app.post("/api/post/customer/walmart/import/location", [verifyToken], Walmart.postWalmartImportLocation);
-
-  app.post("/api/post/customer/walmart/order/archive", [verifyToken], Walmart.postWalmartArchiveOrder);
-
-  // app.post("/api/post/customer/walmart/order/packing_list", [verifyToken], Walmart.postWalmartPackingList);
-  // app.post("/api/post/customer/walmart/order/underlying_bol", [verifyToken], customerControllers.postWalmartUnderlyingBOL);
-  // app.post("/api/post/customer/walmart/order/master_bol", [verifyToken], customerControllers.postWalmartMasterBOL);
+  app.get("/api/get/customer/walmart_us/orders", [verifyToken], WalmartUS.getWalmartUSOrders);
+  app.post("/api/post/customer/walmart_us/import/edi", [verifyToken], WalmartUS.postWalmartUSImportEDI);
+  app.post("/api/post/customer/walmart_us/import/html", [verifyToken], WalmartUS.postWalmartUSImportHTML);
+  app.post("/api/post/customer/walmart_us/import/b2b", [verifyToken], WalmartUS.postWalmartUSImportB2B);
+  app.post("/api/post/customer/walmart_us/import/tracker", [verifyToken], WalmartUS.postWalmartUSImportTracker);
+  app.post("/api/post/customer/walmart_us/import/location", [verifyToken], WalmartUS.postWalmartUSImportLocation);
+  app.post("/api/post/customer/walmart_us/order/archive", [verifyToken], WalmartUS.postWalmartUSArchiveOrder);
 
   app.post("/api/post/customer/hsn/import", [verifyToken], HSN.postHSNImport);
 };

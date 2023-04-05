@@ -1,8 +1,8 @@
 // import InkTechOrders from "./InkTechOrders";
 // import InkTechProducts from "./InkTechProducts";
 // import LovetonerProducts from "./LovetonerProducts";
-import WalmartOrders from "./WalmartOrders";
-import WalmartLocations from "./WalmartLocations";
+import WalmartUSOrders from "./WalmartUSOrders";
+import WalmartUSLocations from "./WalmartUSLocations";
 import WalmartCarrierCodes from "./WalmartCarrierCodes";
 
 import HSNPriceList from "./HSNPriceList";
@@ -11,8 +11,8 @@ export default {
   // InkTechOrders,
   // InkTechProducts,
   // LovetonerProducts,
-  WalmartOrders,
-  WalmartLocations,
+  WalmartUSOrders,
+  WalmartUSLocations,
   WalmartCarrierCodes,
   HSNPriceList,
 };

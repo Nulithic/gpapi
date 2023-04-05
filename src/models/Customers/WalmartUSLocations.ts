@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
-const WalmartLocation = mongoose.model(
-  "WalmartLocation",
+const WalmartUSLocations = mongoose.model(
+  "WalmartUSLocations",
   new mongoose.Schema(
     {
       division: String,
@@ -26,7 +26,7 @@ const WalmartLocation = mongoose.model(
     },
     { versionKey: false }
   ),
-  "WalmartLocation"
+  "WalmartUSLocations"
 );
 
-export default WalmartLocation;
+export default WalmartUSLocations;

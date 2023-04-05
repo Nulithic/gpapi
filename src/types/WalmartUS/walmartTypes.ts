@@ -1,4 +1,4 @@
-import { StediPurchaseOrder } from "./Stedi/walmart850";
+import { StediPurchaseOrder } from "./walmart850";
 
 export interface WalmartTrackerFile {
   "PO Date": number;
