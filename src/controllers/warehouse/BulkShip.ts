@@ -23,11 +23,7 @@ const postBulkShip = async (req: Request, res: Response) => {
 
     for (const [index, item] of importData.entries()) {
       io.to(socketID).emit("postBulkShip", `Order ${index + 1}/${importData.length}`);
-      const response = await getDearSaleOrderAPI(
-        item["PO Number"].replace(/(\s+$)/, "") ? item["PO Number"].replace(/(\s+$)/, "") : item["SO Number"],
-        io,
-        socketID
-      );
+      const response = await getDearSaleOrderAPI(item["PO Number"] ? item["PO Number"] : item["SO Number"], io, socketID);
       const excelDate = new Date(Date.UTC(0, 0, item["Ship Date"] - 1));
 
       if (response) {
@@ -41,20 +37,15 @@ const postBulkShip = async (req: Request, res: Response) => {
             Lines: [
               {
                 ShipmentDate: new Date(excelDate).toISOString(),
-                Carrier: item["Carrier"].replace(/(\s+$)/, ""),
+                Carrier: item["Carrier"],
                 Box: "1",
-                TrackingNumber: item["Tracking Number"].replace(/(\s+$)/, ""),
+                TrackingNumber: item["Tracking Number"],
                 IsShipped: true,
               },
             ],
           };
 
-          await postDearSaleFulfilmentShipAPI(
-            item["PO Number"].replace(/(\s+$)/, "") ? item["PO Number"].replace(/(\s+$)/, "") : item["SO Number"],
-            shipData,
-            io,
-            socketID
-          );
+          await postDearSaleFulfilmentShipAPI(item["PO Number"] ? item["PO Number"] : item["SO Number"], shipData, io, socketID);
         }
       }
       await sleep(2000);
