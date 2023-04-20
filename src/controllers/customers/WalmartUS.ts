@@ -62,6 +62,8 @@ const getWalmartUSOrders = async (req: Request, res: Response) => {
   }
 };
 
+const getWalmartUSCaseSizes = async (req: Request, res: Response) => {};
+
 const postWalmartUSImportEDI = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postWalmartImportEDI");
@@ -75,15 +77,6 @@ const postWalmartUSImportEDI = async (req: Request, res: Response) => {
     }
 
     res.status(200).send(data);
-  } catch (err) {
-    res.status(500).send(err);
-  }
-};
-const postWalmartUSImportHTML = (req: Request, res: Response) => {
-  try {
-    const dataHTML = req.body.dataHTML;
-    console.log(dataHTML);
-    res.status(200).send(dataHTML);
   } catch (err) {
     res.status(500).send(err);
   }
@@ -140,7 +133,32 @@ const postWalmartUSImportB2B = async (req: Request, res: Response) => {
 
     // save JSON to database
     for (const item of translationList.flat()) {
-      await Customers.WalmartUSOrders.updateOne({ purchaseOrderNumber: item.purchaseOrderNumber }, item, { upsert: true });
+      await Customers.WalmartUSOrders.updateOne(
+        { purchaseOrderNumber: item.purchaseOrderNumber },
+        {
+          ...item,
+          actualWeight: "",
+          billOfLading: "",
+          carrierSCAC: "",
+          carrierReference: "",
+          carrierClass: "",
+          nmfc: "",
+          floorOrPallet: "",
+          height: "",
+          width: "",
+          length: "",
+          invoiceDate: "",
+          loadDestination: "",
+          mustArriveByDate: "",
+          numberOfCartons: "",
+          saleOrderNumber: "",
+          shipDateScheduled: "",
+          archived: "No",
+          asnSent: "No",
+          invoiceSent: "No",
+        },
+        { upsert: true }
+      );
     }
 
     io.to(socketID).emit("postWalmartImportB2B", "Import completed.");
@@ -210,12 +228,28 @@ const postWalmartUSArchiveOrder = async (req: Request, res: Response) => {
   }
 };
 
+const postWalmartUSPalletCaseLabel = (req: Request, res: Response) => {
+  const list = req.body.data as WalmartOrder[];
+  try {
+    for (const item of list) {
+    }
+    res.status(200).send();
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+
+const postWalmartUSCaseSizes = (req: Request, res: Response) => {};
+
 export default {
   getWalmartUSOrders,
+  getWalmartUSCaseSizes,
   postWalmartUSImportEDI,
-  postWalmartUSImportHTML,
   postWalmartUSImportB2B,
   postWalmartUSImportTracker,
   postWalmartUSImportLocation,
   postWalmartUSArchiveOrder,
+  postWalmartUSPalletCaseLabel,
+  postWalmartUSCaseSizes,
 };

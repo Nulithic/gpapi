@@ -65,6 +65,8 @@ export interface WalmartTable {
   internalVendorNumber: string;
   grossValue: string;
   archived: string;
+  asnSent: string;
+  invoiceSent: string;
 }
 
 export interface WalmartOrder extends StediPurchaseOrder, WalmartTracker, WalmartTable {}
