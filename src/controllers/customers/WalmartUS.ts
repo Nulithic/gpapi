@@ -62,7 +62,14 @@ const getWalmartUSOrders = async (req: Request, res: Response) => {
   }
 };
 
-const getWalmartUSCaseSizes = async (req: Request, res: Response) => {};
+const getWalmartUSCaseSizes = async (req: Request, res: Response) => {
+  try {
+    const list = await Customers.WalmartUSCaseSizes.find();
+    res.status(200).send(list);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+};
 
 const postWalmartUSImportEDI = async (req: Request, res: Response) => {
   try {
@@ -240,7 +247,29 @@ const postWalmartUSPalletCaseLabel = (req: Request, res: Response) => {
   }
 };
 
-const postWalmartUSCaseSizes = (req: Request, res: Response) => {};
+const addWalmartUSCaseSizes = async (req: Request, res: Response) => {
+  try {
+    const data = req.body.data;
+    await Customers.WalmartUSCaseSizes.updateOne({ walmartItem: data.walmartItem }, data, { upsert: true });
+    const list = await Customers.WalmartUSCaseSizes.find();
+    res.status(200).send(list);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+const deleteWalmartUSCaseSizes = async (req: Request, res: Response) => {
+  try {
+    const data = req.body.data;
+    const dataList = data.map((item: any) => item.walmartItem);
+    await Customers.WalmartUSCaseSizes.deleteMany({ walmartItem: dataList });
+    const list = await Customers.WalmartUSCaseSizes.find();
+    res.status(200).send(list);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
 
 export default {
   getWalmartUSOrders,
@@ -251,5 +280,6 @@ export default {
   postWalmartUSImportLocation,
   postWalmartUSArchiveOrder,
   postWalmartUSPalletCaseLabel,
-  postWalmartUSCaseSizes,
+  addWalmartUSCaseSizes,
+  deleteWalmartUSCaseSizes,
 };
