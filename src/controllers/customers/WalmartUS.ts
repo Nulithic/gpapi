@@ -1,10 +1,16 @@
 import { Request, Response } from "express";
-import { Translate, Walmart850Mapping } from "api/Stedi";
 import { format, parseISO } from "date-fns";
+
+import { Translate, Walmart850Mapping } from "api/Stedi";
 import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
-import { WalmartOrder, WalmartTrackerFile } from "types/WalmartUS/walmartTypes";
+import { WalmartOrder, WalmartTrackerFile, SelectionWithLabels } from "types/WalmartUS/walmartTypes";
 import { userAction } from "utilities/userAction";
+import WalmartUSCaseSizes from "models/Customers/WalmartUSCaseSizes";
+import walmartSSCC from "utilities/walmartSSCC";
+import WalmartUSLabelCodes from "models/Customers/WalmartUSLabelCodes";
+
+import walmartCaseLabel from "templates/walmartCaseLabel";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {
@@ -235,12 +241,69 @@ const postWalmartUSArchiveOrder = async (req: Request, res: Response) => {
   }
 };
 
-const postWalmartUSPalletCaseLabel = (req: Request, res: Response) => {
-  const list = req.body.data as WalmartOrder[];
+const checkWalmartUSCaseLabel = async (req: Request, res: Response) => {
   try {
-    for (const item of list) {
+    const data = req.body.data as WalmartOrder[];
+
+    const orders = data.map((order) => order.purchaseOrderNumber);
+    const getUniqueValues = (array: string[]) => [...new Set(array)];
+    const unqiueOrders = getUniqueValues(orders);
+
+    const existingList = await WalmartUSLabelCodes.find({ poNumber: { $in: unqiueOrders } });
+
+    res.status(200).send(existingList);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
+  try {
+    const selectionForCases = JSON.parse(req.query.selection as string) as WalmartOrder[];
+
+    const caseSizes = await WalmartUSCaseSizes.find();
+
+    const caseLabelList = [];
+
+    for (const selection of selectionForCases) {
+      for (const item of selection.baselineItemDataPO1Loop) {
+        const walmartItem = caseSizes.find((size) => size.walmartItem === item.baselineItemDataPO1.productServiceId07);
+        if (!walmartItem) return res.status(500).send(`${item.baselineItemDataPO1.productServiceId07} not found.`);
+
+        const qty = item.baselineItemDataPO1.quantity02;
+        const caseSize = parseInt(walmartItem.caseSize);
+        const numOfCases = qty / caseSize;
+
+        for (let x = 0; x < numOfCases; x++) {
+          const ssccData = await walmartSSCC();
+
+          const caseLabel = {
+            purchaseOrderNumber: selection.purchaseOrderNumber,
+            buyingParty: selection.buyingParty,
+            buyingPartyStreet: selection.buyingPartyStreet,
+            buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,
+            distributionCenterNumber: selection.distributionCenterNumber,
+            purchaseOrderType: selection.purchaseOrderType,
+            departmentNumber: selection.departmentNumber,
+            wmit: item.baselineItemDataPO1.productServiceId07,
+            vsn: item.baselineItemDataPO1.productServiceId11,
+            serialNumber: parseInt(ssccData.serialNumber),
+            type: "Case",
+            sscc: ssccData.ssscc,
+            date: new Date().toLocaleString(),
+          };
+
+          await WalmartUSLabelCodes.create(caseLabel);
+
+          caseLabelList.push(caseLabel);
+        }
+      }
     }
-    res.status(200).send();
+
+    const pdfStream = await walmartCaseLabel(caseLabelList);
+    res.setHeader("Content-Type", "application/pdf");
+    pdfStream.pipe(res);
+    pdfStream.on("end", () => console.log("Done streaming, response sent."));
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
@@ -279,7 +342,8 @@ export default {
   postWalmartUSImportTracker,
   postWalmartUSImportLocation,
   postWalmartUSArchiveOrder,
-  postWalmartUSPalletCaseLabel,
+  checkWalmartUSCaseLabel,
+  getWalmartUSCaseLabel,
   addWalmartUSCaseSizes,
   deleteWalmartUSCaseSizes,
 };

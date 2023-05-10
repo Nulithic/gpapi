@@ -70,3 +70,10 @@ export interface WalmartTable {
 }
 
 export interface WalmartOrder extends StediPurchaseOrder, WalmartTracker, WalmartTable {}
+
+export interface SelectionWithLabels extends WalmartOrder {
+  [key: string]: any;
+  pallet: boolean;
+  cases: boolean;
+  multiPallet: boolean;
+}

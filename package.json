@@ -10,20 +10,24 @@
     "start": "NODE_PATH=./src ts-node src/app.ts"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^3.1.9",
     "axios": "^0.27.2",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.0",
+    "canvas": "^2.11.2",
     "cheerio": "^1.0.0-rc.12",
     "cli-progress": "^3.11.2",
     "cookie-parser": "^1.4.6",
     "date-fns": "^2.29.3",
     "dotenv": "^16.0.2",
     "express": "^4.18.1",
+    "jsbarcode": "^3.11.5",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.6.1",
     "multer": "^1.4.5-lts.1",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^19.7.2",
+    "react": "^18.2.0",
     "socket.io": "^4.5.2",
     "xml2js": "^0.4.23"
   },
@@ -36,6 +40,7 @@
     "@types/jsonwebtoken": "^8.5.9",
     "@types/multer": "^1.4.7",
     "@types/node": "^18.7.18",
+    "@types/react": "^18.2.6",
     "@types/xml2js": "^0.4.11",
     "ts-node": "^10.9.1",
     "typescript": "^4.8.3"

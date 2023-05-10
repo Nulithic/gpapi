@@ -41,7 +41,11 @@ const customerRoutes = (app: Express) => {
   app.post("/api/post/customer/walmart_us/import/tracker", [verifyToken], WalmartUS.postWalmartUSImportTracker);
   app.post("/api/post/customer/walmart_us/import/location", [verifyToken], WalmartUS.postWalmartUSImportLocation);
   app.post("/api/post/customer/walmart_us/order/archive", [verifyToken], WalmartUS.postWalmartUSArchiveOrder);
-  app.post("/api/post/customer/walmart_us/order/pallet_case_label", [verifyToken], WalmartUS.postWalmartUSPalletCaseLabel);
+
+  app.get("/api/get/customer/walmart_us/order/case_label", [verifyToken], WalmartUS.getWalmartUSCaseLabel);
+  app.post("/api/post/customer/walmart_us/order/case_label/check", [verifyToken], WalmartUS.checkWalmartUSCaseLabel);
+
+  // app.post("/api/post/customer/walmart_us/order/pallet_label", [verifyToken], WalmartUS.postWalmartUSCaseLabel);
 
   app.post("/api/post/customer/walmart_us/case_sizes/add", [verifyToken], WalmartUS.addWalmartUSCaseSizes);
   app.post("/api/post/customer/walmart_us/case_sizes/delete", [verifyToken], WalmartUS.deleteWalmartUSCaseSizes);
