@@ -5,8 +5,9 @@ import { MicroCenter, WalmartUS, HSN } from "controllers/customers";
 
 const customerRoutes = (app: Express) => {
   app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", process.env.ACCESS_CONTROL_ALLOW_ORIGIN);
+    res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, x-access-token");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
     next();
   });
 
@@ -42,7 +43,7 @@ const customerRoutes = (app: Express) => {
   app.post("/api/post/customer/walmart_us/import/location", [verifyToken], WalmartUS.postWalmartUSImportLocation);
   app.post("/api/post/customer/walmart_us/order/archive", [verifyToken], WalmartUS.postWalmartUSArchiveOrder);
 
-  app.get("/api/get/customer/walmart_us/order/case_label", [verifyToken], WalmartUS.getWalmartUSCaseLabel);
+  app.post("/api/post/customer/walmart_us/order/case_label", [verifyToken], WalmartUS.getWalmartUSCaseLabel);
   app.post("/api/post/customer/walmart_us/order/case_label/check", [verifyToken], WalmartUS.checkWalmartUSCaseLabel);
 
   // app.post("/api/post/customer/walmart_us/order/pallet_label", [verifyToken], WalmartUS.postWalmartUSCaseLabel);

@@ -21,7 +21,6 @@ const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[])
 const getWalmartUSOrders = async (req: Request, res: Response) => {
   try {
     const option = req.query.option;
-    console.log(option);
     const response = await Customers.WalmartUSOrders.find();
     let orderList;
 
@@ -259,7 +258,8 @@ const checkWalmartUSCaseLabel = async (req: Request, res: Response) => {
 };
 const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
   try {
-    const selectionForCases = JSON.parse(req.query.selection as string) as WalmartOrder[];
+    userAction(req.body.user, "getWalmartUSCaseLabel");
+    const selectionForCases = req.body.data as WalmartOrder[];
 
     const caseSizes = await WalmartUSCaseSizes.find();
 
@@ -300,10 +300,14 @@ const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
       }
     }
 
+    let totalBytes = 0;
     const pdfStream = await walmartCaseLabel(caseLabelList);
     res.setHeader("Content-Type", "application/pdf");
     pdfStream.pipe(res);
-    pdfStream.on("end", () => console.log("Done streaming, response sent."));
+    pdfStream.on("data", (chunk) => {
+      totalBytes += chunk.length;
+    });
+    pdfStream.on("end", () => console.log(`Walmart Case Label CREATED - ${new Date().toLocaleString()}`));
   } catch (err) {
     console.log(err);
     res.status(500).send(err);

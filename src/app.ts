@@ -1,8 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import cookieParser from "cookie-parser";
-
 import express from "express";
 import mongoose from "mongoose";
 import http from "http";
@@ -19,14 +17,8 @@ import logRoutes from "routes/log";
 const app = express();
 const port = process.env.PORT;
 
-app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
-app.use(
-  cors({
-    origin: "http://192.168.1.134",
-    credentials: true,
-  })
-);
+app.use(cors());
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -71,5 +63,5 @@ mongoose
   });
 
 server.listen(port, () => {
-  console.log(`App is listening on port ${port} !`);
+  console.log(`App is listening on port ${port}!`);
 });
