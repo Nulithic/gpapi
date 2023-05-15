@@ -4,7 +4,7 @@ import { format, parseISO } from "date-fns";
 import { Translate, Walmart850Mapping } from "api/Stedi";
 import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
-import { WalmartOrder, WalmartTrackerFile, SelectionWithLabels } from "types/WalmartUS/walmartTypes";
+import { WalmartOrder, WalmartTrackerFile, SelectionWithLabels, WalmartCaseLabel } from "types/WalmartUS/walmartTypes";
 import { userAction } from "utilities/userAction";
 import WalmartUSCaseSizes from "models/Customers/WalmartUSCaseSizes";
 import walmartSSCC from "utilities/walmartSSCC";
@@ -248,7 +248,7 @@ const checkWalmartUSCaseLabel = async (req: Request, res: Response) => {
     const getUniqueValues = (array: string[]) => [...new Set(array)];
     const unqiueOrders = getUniqueValues(orders);
 
-    const existingList = await WalmartUSLabelCodes.find({ poNumber: { $in: unqiueOrders } });
+    const existingList = await WalmartUSLabelCodes.find({ purchaseOrderNumber: { $in: unqiueOrders }, type: "Case" });
 
     res.status(200).send(existingList);
   } catch (err) {
@@ -300,14 +300,78 @@ const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
       }
     }
 
-    let totalBytes = 0;
     const pdfStream = await walmartCaseLabel(caseLabelList);
     res.setHeader("Content-Type", "application/pdf");
     pdfStream.pipe(res);
-    pdfStream.on("data", (chunk) => {
-      totalBytes += chunk.length;
-    });
     pdfStream.on("end", () => console.log(`Walmart Case Label CREATED - ${new Date().toLocaleString()}`));
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+const getExistingWalmartUSCaseLabel = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "getExistingWalmartUSCaseLabel");
+    const existingList = req.body.data as WalmartCaseLabel[];
+    const pdfStream = await walmartCaseLabel(existingList);
+    res.setHeader("Content-Type", "application/pdf");
+    pdfStream.pipe(res);
+    pdfStream.on("end", () => console.log(`Existing Walmart Case Label CREATED - ${new Date().toLocaleString()}`));
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+const getNewWalmartUSCaseLabel = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "getWalmartUSCaseLabel");
+    const existingList = req.body.data.caseLabels as WalmartCaseLabel[];
+    const selectionForCases = req.body.data.selection as WalmartOrder[];
+
+    const orderList = existingList.map((item) => item.purchaseOrderNumber);
+    await WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: { $in: orderList }, type: "Case" });
+
+    const caseSizes = await WalmartUSCaseSizes.find();
+    const caseLabelList = [];
+    for (const selection of selectionForCases) {
+      for (const item of selection.baselineItemDataPO1Loop) {
+        const walmartItem = caseSizes.find((size) => size.walmartItem === item.baselineItemDataPO1.productServiceId07);
+        if (!walmartItem) return res.status(500).send(`${item.baselineItemDataPO1.productServiceId07} not found.`);
+
+        const qty = item.baselineItemDataPO1.quantity02;
+        const caseSize = parseInt(walmartItem.caseSize);
+        const numOfCases = qty / caseSize;
+
+        for (let x = 0; x < numOfCases; x++) {
+          const ssccData = await walmartSSCC();
+
+          const caseLabel = {
+            purchaseOrderNumber: selection.purchaseOrderNumber,
+            buyingParty: selection.buyingParty,
+            buyingPartyStreet: selection.buyingPartyStreet,
+            buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,
+            distributionCenterNumber: selection.distributionCenterNumber,
+            purchaseOrderType: selection.purchaseOrderType,
+            departmentNumber: selection.departmentNumber,
+            wmit: item.baselineItemDataPO1.productServiceId07,
+            vsn: item.baselineItemDataPO1.productServiceId11,
+            serialNumber: parseInt(ssccData.serialNumber),
+            type: "Case",
+            sscc: ssccData.ssscc,
+            date: new Date().toLocaleString(),
+          };
+
+          await WalmartUSLabelCodes.create(caseLabel);
+
+          caseLabelList.push(caseLabel);
+        }
+      }
+    }
+
+    const pdfStream = await walmartCaseLabel(caseLabelList);
+    res.setHeader("Content-Type", "application/pdf");
+    pdfStream.pipe(res);
+    pdfStream.on("end", () => console.log(`New Walmart Case Label CREATED - ${new Date().toLocaleString()}`));
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
@@ -348,6 +412,8 @@ export default {
   postWalmartUSArchiveOrder,
   checkWalmartUSCaseLabel,
   getWalmartUSCaseLabel,
+  getExistingWalmartUSCaseLabel,
+  getNewWalmartUSCaseLabel,
   addWalmartUSCaseSizes,
   deleteWalmartUSCaseSizes,
 };
