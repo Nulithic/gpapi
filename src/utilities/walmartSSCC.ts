@@ -17,7 +17,7 @@ const walmartSSCC = async () => {
 
   const sscc = "00" + ssccData + checkDigit;
 
-  return { ssscc: sscc, serialNumber: serialNumber };
+  return { sscc: sscc, serialNumber: serialNumber };
 };
 
 export default walmartSSCC;

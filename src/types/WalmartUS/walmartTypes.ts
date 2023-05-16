@@ -78,7 +78,7 @@ export interface SelectionWithLabels extends WalmartOrder {
   multiPallet: boolean;
 }
 
-export interface WalmartCaseLabel {
+export interface WalmartLabel {
   purchaseOrderNumber: string;
   buyingParty: string;
   buyingPartyStreet: string;
@@ -88,6 +88,7 @@ export interface WalmartCaseLabel {
   departmentNumber: string;
   wmit: string;
   vsn: string;
+  numberOfCases: number;
   serialNumber: number;
   type: string;
   sscc: string;

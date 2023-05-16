@@ -13,6 +13,7 @@ const WalmartUSLabelCodes = mongoose.model(
       departmentNumber: String,
       wmit: String,
       vsn: String,
+      numberOfCases: Number,
       serialNumber: Number,
       type: String,
       sscc: String,
