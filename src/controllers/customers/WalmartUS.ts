@@ -10,6 +10,8 @@ import WalmartUSCaseSizes from "models/Customers/WalmartUSCaseSizes";
 import walmartSSCC from "utilities/walmartSSCC";
 import WalmartUSLabelCodes from "models/Customers/WalmartUSLabelCodes";
 
+import walmartPackingSlip from "templates/walmartPackingSlip";
+
 import walmartCaseLabel from "templates/walmartCaseLabel";
 import walmartPalletLabel from "templates/walmartPalletLabel";
 
@@ -235,6 +237,36 @@ const postWalmartUSArchiveOrder = async (req: Request, res: Response) => {
       await Customers.WalmartUSOrders.findOneAndUpdate({ purchaseOrderNumber: item.purchaseOrderNumber }, { archived: "Yes" });
     }
     res.status(200).send("Archive Completed.");
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+
+const getWalmartUSPackingSlip = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "getWalmartUSPackingSlip");
+    let selectionForPacking = req.body.data as WalmartOrder[];
+
+    const caseSizes = await WalmartUSCaseSizes.find();
+
+    for (let order of selectionForPacking) {
+      for (let item of order.baselineItemDataPO1Loop) {
+        const walmartItem = caseSizes.find((size) => size.walmartItem === item.baselineItemDataPO1.productServiceId07);
+        if (!walmartItem) return res.status(500).send(`${item.baselineItemDataPO1.productServiceId07} not found.`);
+
+        const qty = item.baselineItemDataPO1.quantity02;
+        const caseSize = parseInt(walmartItem.caseSize);
+        const numOfCases = qty / caseSize;
+
+        item.baselineItemDataPO1.numberOfCases = numOfCases;
+      }
+    }
+
+    const pdfStream = await walmartPackingSlip(selectionForPacking);
+    res.setHeader("Content-Type", "application/pdf");
+    pdfStream.pipe(res);
+    pdfStream.on("end", () => console.log(`Walmart Packing Slip CREATED - ${new Date().toLocaleString()}`));
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
@@ -554,6 +586,7 @@ export default {
   postWalmartUSImportTracker,
   postWalmartUSImportLocation,
   postWalmartUSArchiveOrder,
+  getWalmartUSPackingSlip,
   checkWalmartUSCaseLabel,
   getWalmartUSCaseLabel,
   getExistingWalmartUSCaseLabel,

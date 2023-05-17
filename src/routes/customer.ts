@@ -43,6 +43,8 @@ const customerRoutes = (app: Express) => {
   app.post("/api/post/customer/walmart_us/import/location", [verifyToken], WalmartUS.postWalmartUSImportLocation);
   app.post("/api/post/customer/walmart_us/order/archive", [verifyToken], WalmartUS.postWalmartUSArchiveOrder);
 
+  app.post("/api/post/customer/walmart_us/order/packing_slip", [verifyToken], WalmartUS.getWalmartUSPackingSlip);
+
   app.post("/api/post/customer/walmart_us/order/case_label/check", [verifyToken], WalmartUS.checkWalmartUSCaseLabel);
   app.post("/api/post/customer/walmart_us/order/case_label", [verifyToken], WalmartUS.getWalmartUSCaseLabel);
   app.post("/api/post/customer/walmart_us/order/case_label/existing", [verifyToken], WalmartUS.getExistingWalmartUSCaseLabel);

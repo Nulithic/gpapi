@@ -39,6 +39,7 @@ export interface BaselineItemDataPO1 {
   productServiceId23: string;
   productServiceIdQualifier12?: string;
   productServiceId13?: string;
+  numberOfCases?: number;
 }
 
 export interface ItemPhysicalDetailsPO4 {

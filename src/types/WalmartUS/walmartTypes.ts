@@ -87,8 +87,8 @@ export interface WalmartLabel {
   purchaseOrderType: string;
   departmentNumber: string;
   wmit: string;
-  vsn: string;
-  numberOfCases: number;
+  vsn?: string;
+  numberOfCases?: number;
   serialNumber: number;
   type: string;
   sscc: string;

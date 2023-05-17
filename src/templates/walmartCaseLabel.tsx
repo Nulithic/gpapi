@@ -3,21 +3,7 @@ import { Page, Text, View, Document, StyleSheet, Image, renderToFile, renderToSt
 import JsBarcode from "jsbarcode";
 import { Canvas } from "canvas";
 
-interface WalmartCaseLabel {
-  purchaseOrderNumber: string;
-  buyingParty: string;
-  buyingPartyStreet: string;
-  buyingPartyAddress: string;
-  distributionCenterNumber: string;
-  purchaseOrderType: string;
-  departmentNumber: string;
-  wmit: string;
-  vsn: string;
-  serialNumber: number;
-  type: string;
-  sscc: string;
-  date: string;
-}
+import { WalmartLabel } from "types/WalmartUS/walmartTypes";
 
 const styles = StyleSheet.create({
   page: {
@@ -90,7 +76,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const CaseLabelDoc = ({ data }: { data: WalmartCaseLabel[] }) => (
+const WalmartCaseLabel = ({ data }: { data: WalmartLabel[] }) => (
   <Document>
     {data.map((item) => {
       const canvas = new Canvas(50, 50);
@@ -155,6 +141,6 @@ const CaseLabelDoc = ({ data }: { data: WalmartCaseLabel[] }) => (
   </Document>
 );
 
-export default async (data: WalmartCaseLabel[]) => {
-  return await renderToStream(<CaseLabelDoc {...{ data }} />);
+export default async (data: WalmartLabel[]) => {
+  return await renderToStream(<WalmartCaseLabel {...{ data }} />);
 };
