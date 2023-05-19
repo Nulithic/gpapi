@@ -45,7 +45,7 @@ const customerRoutes = (app: Express) => {
 
   app.post("/api/post/customer/walmart_us/order/packing_slip", [verifyToken], WalmartUS.getWalmartUSPackingSlip);
   app.post("/api/post/customer/walmart_us/order/underlying_bol", [verifyToken], WalmartUS.getWalmartUSUnderlyingBOL);
-  app.post("/api/post/customer/walmart_us/order/master_bol", [verifyToken], WalmartUS.getWalmartUSPackingSlip);
+  app.post("/api/post/customer/walmart_us/order/master_bol", [verifyToken], WalmartUS.getWalmartUSMasterBOL);
 
   app.post("/api/post/customer/walmart_us/order/case_label/check", [verifyToken], WalmartUS.checkWalmartUSCaseLabel);
   app.post("/api/post/customer/walmart_us/order/case_label", [verifyToken], WalmartUS.getWalmartUSCaseLabel);

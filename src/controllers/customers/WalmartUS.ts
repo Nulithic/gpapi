@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { format, parseISO } from "date-fns";
+import fs from "fs";
+import path from "path";
 
 import { Translate, Walmart850Mapping } from "api/Stedi";
 import { scrapB2B, convertHTML } from "puppet/B2B";
@@ -15,6 +17,7 @@ import walmartUnderlyingBOL from "templates/walmartUnderlyingBOL";
 
 import walmartCaseLabel from "templates/walmartCaseLabel";
 import walmartPalletLabel from "templates/walmartPalletLabel";
+import walmartMasterBOL from "templates/walmartMasterBOL";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {
@@ -282,6 +285,23 @@ const getWalmartUSUnderlyingBOL = async (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/pdf");
     pdfStream.pipe(res);
     pdfStream.on("end", () => console.log(`Walmart Underlying BOL CREATED - ${new Date().toLocaleString()}`));
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+const getWalmartUSMasterBOL = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "getWalmartUSMasterBOL");
+    let selectionForMasterBOL = req.body.data as WalmartOrder[];
+
+    walmartMasterBOL(selectionForMasterBOL);
+
+    const directoryPath = path.dirname(require.main.filename) + "/resources/temp/";
+    const pdfStream = fs.createReadStream(directoryPath + "asdf.pdf");
+    res.setHeader("Content-Type", "application/pdf");
+    pdfStream.pipe(res);
+    pdfStream.on("end", () => console.log(`Walmart Master BOL CREATED - ${new Date().toLocaleString()}`));
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
@@ -603,6 +623,7 @@ export default {
   postWalmartUSArchiveOrder,
   getWalmartUSPackingSlip,
   getWalmartUSUnderlyingBOL,
+  getWalmartUSMasterBOL,
   checkWalmartUSCaseLabel,
   getWalmartUSCaseLabel,
   getExistingWalmartUSCaseLabel,
