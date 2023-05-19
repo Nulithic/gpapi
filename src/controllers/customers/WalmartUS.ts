@@ -11,6 +11,7 @@ import walmartSSCC from "utilities/walmartSSCC";
 import WalmartUSLabelCodes from "models/Customers/WalmartUSLabelCodes";
 
 import walmartPackingSlip from "templates/walmartPackingSlip";
+import walmartUnderlyingBOL from "templates/walmartUnderlyingBOL";
 
 import walmartCaseLabel from "templates/walmartCaseLabel";
 import walmartPalletLabel from "templates/walmartPalletLabel";
@@ -267,6 +268,20 @@ const getWalmartUSPackingSlip = async (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/pdf");
     pdfStream.pipe(res);
     pdfStream.on("end", () => console.log(`Walmart Packing Slip CREATED - ${new Date().toLocaleString()}`));
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+const getWalmartUSUnderlyingBOL = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "getWalmartUSUnderlyingBOL");
+    let selectionForUnderlyingBOL = req.body.data as WalmartOrder[];
+
+    const pdfStream = await walmartUnderlyingBOL(selectionForUnderlyingBOL);
+    res.setHeader("Content-Type", "application/pdf");
+    pdfStream.pipe(res);
+    pdfStream.on("end", () => console.log(`Walmart Underlying BOL CREATED - ${new Date().toLocaleString()}`));
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
@@ -587,6 +602,7 @@ export default {
   postWalmartUSImportLocation,
   postWalmartUSArchiveOrder,
   getWalmartUSPackingSlip,
+  getWalmartUSUnderlyingBOL,
   checkWalmartUSCaseLabel,
   getWalmartUSCaseLabel,
   getExistingWalmartUSCaseLabel,

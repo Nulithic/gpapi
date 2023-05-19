@@ -31,6 +31,7 @@ export interface WalmartTracker {
   purchaseOrderEventCode: string;
   actualWeight: string;
   billOfLading: string;
+  carrierName: string;
   carrierSCAC: string;
   carrierReference: string;
   carrierClass: string;
@@ -67,6 +68,7 @@ export interface WalmartTable {
   archived: string;
   asnSent: string;
   invoiceSent: string;
+  distributionCenterName: string;
 }
 
 export interface WalmartOrder extends StediPurchaseOrder, WalmartTracker, WalmartTable {}
