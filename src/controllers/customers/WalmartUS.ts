@@ -1,9 +1,10 @@
+import { WalmartAdvanceShipNotice, HierarchicalLevelHLLoopTare } from "./../../types/WalmartUS/stedi856";
 import { Request, Response } from "express";
-import { format, parseISO } from "date-fns";
+import { format, parse, parseISO } from "date-fns";
 import fs from "fs";
 import path from "path";
 
-import { Translate, Walmart850Mapping } from "api/Stedi";
+import { walmartTranslate850, walmartMap850 } from "api/Stedi";
 import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
 import { WalmartOrder, WalmartTrackerFile, WalmartLabel } from "types/WalmartUS/walmartTypes";
@@ -18,6 +19,7 @@ import walmartUnderlyingBOL from "templates/walmartUnderlyingBOL";
 import walmartCaseLabel from "templates/walmartCaseLabel";
 import walmartPalletLabel from "templates/walmartPalletLabel";
 import walmartMasterBOL from "templates/walmartMasterBOL";
+import WalmartUSOrders from "models/Customers/WalmartUSOrders";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {
@@ -88,8 +90,8 @@ const postWalmartUSImportEDI = async (req: Request, res: Response) => {
     userAction(req.body.user, "postWalmartImportEDI");
 
     const dataEDI = req.body.dataEDI;
-    const translationData = await Translate(dataEDI);
-    const data = await Walmart850Mapping(translationData);
+    const translationData = await walmartTranslate850(dataEDI);
+    const data = await walmartMap850(translationData);
 
     for (const item of data) {
       await Customers.WalmartUSOrders.updateOne({ purchaseOrderNumber: item.purchaseOrderNumber }, item, { upsert: true });
@@ -141,10 +143,10 @@ const postWalmartUSImportB2B = async (req: Request, res: Response) => {
     // convert EDIs to JSON
     let translationList: WalmartOrder[] = [];
     for (const item of groupList) {
-      const translationData = await Translate(item);
+      const translationData = await walmartTranslate850(item);
       io.to(socketID).emit("postWalmartImportB2B", "Translate EDI completed.");
 
-      const data = await Walmart850Mapping(translationData);
+      const data = await walmartMap850(translationData);
       io.to(socketID).emit("postWalmartImportB2B", "Map EDI completed.");
 
       translationList.push(data);
@@ -175,6 +177,7 @@ const postWalmartUSImportB2B = async (req: Request, res: Response) => {
           archived: "No",
           asnSent: "No",
           invoiceSent: "No",
+          hasPalletLabel: "No",
         },
         { upsert: true }
       );
@@ -506,6 +509,8 @@ const getWalmartUSPalletLabel = async (req: Request, res: Response) => {
       await WalmartUSLabelCodes.create(palletLabel);
 
       palletLabelList.push(palletLabel);
+
+      await WalmartUSOrders.findOneAndUpdate({ purchaseOrderNumber: selection.purchaseOrderNumber }, { hasPalletLabel: "Yes" });
     }
 
     const pdfStream = await walmartPalletLabel(palletLabelList);
@@ -613,6 +618,291 @@ const deleteWalmartUSCaseSizes = async (req: Request, res: Response) => {
   }
 };
 
+const postWalmartASN = async (req: Request, res: Response) => {
+  try {
+    const date = req.body.data.date as Date;
+    const data = req.body.data.selection as WalmartOrder[];
+
+    // const poNumberList = data.map((item) => item.purchaseOrderNumber);
+    // const labelList = await WalmartUSLabelCodes.find({ purchaseOrderNumber: { $in: poNumberList } });
+    // const groupByOrderKey = labelList.reduce((result, item) => {
+    //   const key = item.purchaseOrderNumber;
+    //   result[key] = [...(result[key] || []), item];
+    //   return result;
+    // }, Object.create(null));
+    // const groupByAddress: WalmartOrder[][] = Object.values(groupByOrderKey);
+
+    const asnList = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const hasPallet = data[i].hasPalletLabel === "Yes";
+      const orderStructureKey = hasPallet ? "hierarchical_level_HL_loop_tare" : "hierarchical_level_HL_loop_pack";
+      const parsedPODate = parse(data[i].purchaseOrderDate, "MM/dd/yyyy", new Date());
+      const poDate = format(parsedPODate, "yyyyMMdd");
+
+      const palletInfo = await WalmartUSLabelCodes.findOne({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Pallet" });
+      const caseInfo = await WalmartUSLabelCodes.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Case" });
+
+      const getCaseStructure = () => {
+        return caseInfo.map((item) => ({
+          marks_and_numbers_information_MAN: [
+            {
+              marks_and_numbers_qualifier_01: "GM",
+              marks_and_numbers_02: item.sscc,
+            },
+          ],
+          hierarchical_level_HL_loop: [
+            {
+              item_identification_LIN: {
+                product_service_id_qualifier_02: "UP",
+                product_service_id_03: "681131309349",
+                product_service_id_qualifier_04: "IN",
+                product_service_id_05: item.wmit,
+                product_service_id_qualifier_06: "VN",
+                product_service_id_07: item.vsn,
+              },
+              item_detail_shipment_SN1: {
+                number_of_units_shipped_02: 12,
+                unit_or_basis_for_measurement_code_03: "EA",
+              },
+            },
+          ],
+        }));
+      };
+
+      const getOrderStructure = () => {
+        if (hasPallet) {
+          return [
+            {
+              marks_and_numbers_information_MAN: [
+                {
+                  marks_and_numbers_qualifier_01: "GM",
+                  marks_and_numbers_02: palletInfo.sscc,
+                },
+              ],
+              hierarchical_level_HL_loop: [
+                {
+                  marks_and_numbers_information_MAN: [
+                    {
+                      marks_and_numbers_qualifier_01: "GM",
+                      marks_and_numbers_02: "00081995202000151517",
+                    },
+                  ],
+                  hierarchical_level_HL_loop: [
+                    {
+                      item_identification_LIN: {
+                        product_service_id_qualifier_02: "UP",
+                        product_service_id_03: "681131309349",
+                        product_service_id_qualifier_04: "IN",
+                        product_service_id_05: "578680007",
+                        product_service_id_qualifier_06: "VN",
+                        product_service_id_07: "INHPGP100014175",
+                      },
+                      item_detail_shipment_SN1: {
+                        number_of_units_shipped_02: 12,
+                        unit_or_basis_for_measurement_code_03: "EA",
+                      },
+                    },
+                  ],
+                },
+                {
+                  marks_and_numbers_information_MAN: [
+                    {
+                      marks_and_numbers_qualifier_01: "GM",
+                      marks_and_numbers_02: "00081995202000151524",
+                    },
+                  ],
+                  hierarchical_level_HL_loop: [
+                    {
+                      item_identification_LIN: {
+                        product_service_id_qualifier_02: "UP",
+                        product_service_id_03: "681131309349",
+                        product_service_id_qualifier_04: "IN",
+                        product_service_id_05: "578680007",
+                        product_service_id_qualifier_06: "VN",
+                        product_service_id_07: "INHPGP100014175",
+                      },
+                      item_detail_shipment_SN1: {
+                        number_of_units_shipped_02: 12,
+                        unit_or_basis_for_measurement_code_03: "EA",
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ];
+        } else
+          return [
+            {
+              marks_and_numbers_information_MAN: [
+                {
+                  marks_and_numbers_qualifier_01: "GM",
+                  marks_and_numbers_02: "00081995202000151517",
+                },
+              ],
+              hierarchical_level_HL_loop: [
+                {
+                  item_identification_LIN: {
+                    product_service_id_qualifier_02: "UP",
+                    product_service_id_03: "681131309349",
+                    product_service_id_qualifier_04: "IN",
+                    product_service_id_05: "578680007",
+                    product_service_id_qualifier_06: "VN",
+                    product_service_id_07: "INHPGP100014175",
+                  },
+                  item_detail_shipment_SN1: {
+                    number_of_units_shipped_02: 12,
+                    unit_or_basis_for_measurement_code_03: "EA",
+                  },
+                },
+              ],
+            },
+            {
+              marks_and_numbers_information_MAN: [
+                {
+                  marks_and_numbers_qualifier_01: "GM",
+                  marks_and_numbers_02: "00081995202000151524",
+                },
+              ],
+              hierarchical_level_HL_loop: [
+                {
+                  item_identification_LIN: {
+                    product_service_id_qualifier_02: "UP",
+                    product_service_id_03: "681131309349",
+                    product_service_id_qualifier_04: "IN",
+                    product_service_id_05: "578680007",
+                    product_service_id_qualifier_06: "VN",
+                    product_service_id_07: "INHPGP100014175",
+                  },
+                  item_detail_shipment_SN1: {
+                    number_of_units_shipped_02: 12,
+                    unit_or_basis_for_measurement_code_03: "EA",
+                  },
+                },
+              ],
+            },
+          ];
+      };
+
+      const asn: WalmartAdvanceShipNotice = {
+        heading: {
+          transaction_set_header_ST: {
+            transaction_set_identifier_code_01: "856",
+            transaction_set_control_number_02: i + 1,
+          },
+          beginning_segment_for_ship_notice_BSN: {
+            transaction_set_purpose_code_01: "00",
+            shipment_identification_02: "654321",
+            date_03: date.toLocaleDateString(),
+            time_04: date.toLocaleTimeString(),
+            hierarchical_structure_code_05: "0001",
+          },
+        },
+        detail: {
+          hierarchical_level_HL_loop: [
+            {
+              carrier_details_quantity_and_weight_TD1: [
+                {
+                  weight_qualifier_06: "G",
+                  weight_07: data[i].actualWeight,
+                  unit_or_basis_for_measurement_code_08: "LB",
+                },
+              ],
+              carrier_details_routing_sequence_transit_time_TD5: [
+                {
+                  identification_code_qualifier_02: "2",
+                  identification_code_03: data[i].carrierSCAC,
+                  transportation_method_type_code_04: "M", // maybe
+                },
+              ],
+              reference_information_REF: [
+                {
+                  reference_identification_qualifier_01: "BM",
+                  reference_identification_02: data[i].billOfLading,
+                },
+                {
+                  reference_identification_qualifier_01: "CN",
+                  reference_identification_02: data[i].carrierReference,
+                },
+              ],
+              date_time_reference_DTM: [
+                {
+                  date_time_qualifier_01: "011",
+                  date_02: date.toLocaleDateString(),
+                },
+              ],
+              fob_related_instructions_FOB: {
+                shipment_method_of_payment_01: data[i].fobMethodOfPayment,
+              },
+              party_identification_N1_loop: [
+                {
+                  party_identification_N1: {
+                    entity_identifier_code_01: "ST",
+                    name_02: data[i].buyingParty,
+                    identification_code_qualifier_03: "UL",
+                    identification_code_04: data[i].buyingPartyGLN,
+                  },
+                },
+                {
+                  party_identification_N1: {
+                    entity_identifier_code_01: "SF",
+                    name_02: "Green Project Inc",
+                    identification_code_qualifier_03: "UL",
+                    identification_code_04: "0819952029607",
+                  },
+                  party_location_N3: [
+                    {
+                      address_information_01: "815 Echelon Ct",
+                    },
+                  ],
+                  geographic_location_N4: {
+                    city_name_01: "City of Industry",
+                    state_or_province_code_02: "CA",
+                    postal_code_03: "91744",
+                    country_code_04: "US",
+                  },
+                },
+              ],
+              hierarchical_level_HL_loop: [
+                {
+                  purchase_order_reference_PRF: {
+                    purchase_order_number_01: data[i].purchaseOrderNumber,
+                    date_04: poDate,
+                  },
+                  reference_information_REF: [
+                    {
+                      reference_identification_qualifier_01: "IA",
+                      reference_identification_02: "546382721",
+                    },
+                  ],
+                  [orderStructureKey]: getOrderStructure,
+                },
+              ],
+            },
+          ],
+        },
+        summary: {
+          transaction_totals_CTT: {
+            number_of_line_items_01: 7,
+          },
+          transaction_set_trailer_SE: {
+            number_of_included_segments_01: 36,
+            transaction_set_control_number_02: 1,
+          },
+        },
+      };
+
+      asnList.push(asn);
+    }
+
+    res.status(200).send(asnList);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+
 export default {
   getWalmartUSOrders,
   getWalmartUSCaseSizes,
@@ -634,4 +924,5 @@ export default {
   getNewWalmartUSPalletLabel,
   addWalmartUSCaseSizes,
   deleteWalmartUSCaseSizes,
+  postWalmartASN,
 };

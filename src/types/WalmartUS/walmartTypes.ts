@@ -1,4 +1,4 @@
-import { StediPurchaseOrder } from "./walmart850";
+import { WalmartPurchaseOrder } from "./stedi850";
 
 export interface WalmartTrackerFile {
   "PO Date": number;
@@ -69,9 +69,10 @@ export interface WalmartTable {
   asnSent: string;
   invoiceSent: string;
   distributionCenterName: string;
+  hasPalletLabel: string;
 }
 
-export interface WalmartOrder extends StediPurchaseOrder, WalmartTracker, WalmartTable {}
+export interface WalmartOrder extends WalmartPurchaseOrder, WalmartTracker, WalmartTable {}
 
 export interface SelectionWithLabels extends WalmartOrder {
   [key: string]: any;

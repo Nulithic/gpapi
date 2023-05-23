@@ -5,7 +5,7 @@ const stediHeaders = {
   Authorization: `Key ${process.env.STEDI_API_KEY}`,
 };
 
-export const Translate = async (data: string) => {
+export const walmartTranslate850 = async (data: string) => {
   try {
     const response = await axios.post(
       "https://edi-translate.us.stedi.com/2022-01-01/x12/to-json",
@@ -23,7 +23,7 @@ export const Translate = async (data: string) => {
   }
 };
 
-export const Walmart850Mapping = async (translationData: string) => {
+export const walmartMap850 = async (translationData: string) => {
   try {
     const startTime = performance.now();
 
@@ -42,7 +42,7 @@ export const Walmart850Mapping = async (translationData: string) => {
   }
 };
 
-export const Walmart810Mapping = async (translationData: string) => {
+export const walmartMap810 = async (translationData: string) => {
   try {
     const data = JSON.stringify(translationData);
 
@@ -53,7 +53,7 @@ export const Walmart810Mapping = async (translationData: string) => {
     return err.message;
   }
 };
-export const Walmart846Mapping = async (translationData: string) => {
+export const walmartMap846 = async (translationData: string) => {
   try {
     const data = JSON.stringify(translationData);
 

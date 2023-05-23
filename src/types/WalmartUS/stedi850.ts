@@ -1,4 +1,4 @@
-export interface StediPurchaseOrder {
+export interface WalmartPurchaseOrder {
   transactionSetHeaderST: TransactionSetHeaderST;
   beginningSegmentForPurchaseOrderBEG: BeginningSegmentForPurchaseOrderBEG;
   currencyCUR: CurrencyCUR;

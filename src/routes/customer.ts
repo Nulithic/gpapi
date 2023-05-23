@@ -60,6 +60,8 @@ const customerRoutes = (app: Express) => {
   app.post("/api/post/customer/walmart_us/case_sizes/add", [verifyToken], WalmartUS.addWalmartUSCaseSizes);
   app.post("/api/post/customer/walmart_us/case_sizes/delete", [verifyToken], WalmartUS.deleteWalmartUSCaseSizes);
 
+  app.post("/api/post/customer/walmart_us/asn", [verifyToken], WalmartUS.postWalmartASN);
+
   //HSN
   app.post("/api/post/customer/hsn/import", [verifyToken], HSN.postHSNImport);
 };
