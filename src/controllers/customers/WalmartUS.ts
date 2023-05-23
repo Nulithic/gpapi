@@ -1,4 +1,3 @@
-import { WalmartAdvanceShipNotice, HierarchicalLevelHLLoopTare } from "./../../types/WalmartUS/stedi856";
 import { Request, Response } from "express";
 import { format, parse, parseISO } from "date-fns";
 import fs from "fs";
@@ -7,11 +6,10 @@ import path from "path";
 import { walmartTranslate850, walmartMap850 } from "api/Stedi";
 import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
+import { WalmartAdvanceShipNotice } from "types/WalmartUS/stedi856";
 import { WalmartOrder, WalmartTrackerFile, WalmartLabel } from "types/WalmartUS/walmartTypes";
 import { userAction } from "utilities/userAction";
-import WalmartUSCaseSizes from "models/Customers/WalmartUSCaseSizes";
 import walmartSSCC from "utilities/walmartSSCC";
-import WalmartUSLabelCodes from "models/Customers/WalmartUSLabelCodes";
 
 import walmartPackingSlip from "templates/walmartPackingSlip";
 import walmartUnderlyingBOL from "templates/walmartUnderlyingBOL";
@@ -19,7 +17,6 @@ import walmartUnderlyingBOL from "templates/walmartUnderlyingBOL";
 import walmartCaseLabel from "templates/walmartCaseLabel";
 import walmartPalletLabel from "templates/walmartPalletLabel";
 import walmartMasterBOL from "templates/walmartMasterBOL";
-import WalmartUSOrders from "models/Customers/WalmartUSOrders";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {
@@ -71,15 +68,6 @@ const getWalmartUSOrders = async (req: Request, res: Response) => {
     }));
 
     res.status(200).send(newList);
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-};
-
-const getWalmartUSCaseSizes = async (req: Request, res: Response) => {
-  try {
-    const list = await Customers.WalmartUSCaseSizes.find();
-    res.status(200).send(list);
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -255,7 +243,7 @@ const getWalmartUSPackingSlip = async (req: Request, res: Response) => {
     userAction(req.body.user, "getWalmartUSPackingSlip");
     let selectionForPacking = req.body.data as WalmartOrder[];
 
-    const caseSizes = await WalmartUSCaseSizes.find();
+    const caseSizes = await Customers.WalmartUSProducts.find();
 
     for (let order of selectionForPacking) {
       for (let item of order.baselineItemDataPO1Loop) {
@@ -319,7 +307,7 @@ const checkWalmartUSCaseLabel = async (req: Request, res: Response) => {
     const getUniqueValues = (array: string[]) => [...new Set(array)];
     const unqiueOrders = getUniqueValues(orders);
 
-    const existingList = await WalmartUSLabelCodes.find({ purchaseOrderNumber: { $in: unqiueOrders }, type: "Case" });
+    const existingList = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: { $in: unqiueOrders }, type: "Case" });
 
     res.status(200).send(existingList);
   } catch (err) {
@@ -332,7 +320,7 @@ const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
     userAction(req.body.user, "getWalmartUSCaseLabel");
     const selectionForCases = req.body.data as WalmartOrder[];
 
-    const caseSizes = await WalmartUSCaseSizes.find();
+    const caseSizes = await Customers.WalmartUSProducts.find();
 
     const caseLabelList = [];
 
@@ -364,7 +352,7 @@ const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
             date: new Date().toLocaleString(),
           };
 
-          await WalmartUSLabelCodes.create(caseLabel);
+          await Customers.WalmartUSLabelCodes.create(caseLabel);
 
           caseLabelList.push(caseLabel);
         }
@@ -400,9 +388,9 @@ const getNewWalmartUSCaseLabel = async (req: Request, res: Response) => {
     const selectionForCases = req.body.data.selection as WalmartOrder[];
 
     const orderList = existingList.map((item) => item.purchaseOrderNumber);
-    await WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: { $in: orderList }, type: "Case" });
+    await Customers.WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: { $in: orderList }, type: "Case" });
 
-    const caseSizes = await WalmartUSCaseSizes.find();
+    const caseSizes = await Customers.WalmartUSProducts.find();
     const caseLabelList = [];
     for (const selection of selectionForCases) {
       for (const item of selection.baselineItemDataPO1Loop) {
@@ -432,7 +420,7 @@ const getNewWalmartUSCaseLabel = async (req: Request, res: Response) => {
             date: new Date().toLocaleString(),
           };
 
-          await WalmartUSLabelCodes.create(caseLabel);
+          await Customers.WalmartUSLabelCodes.create(caseLabel);
 
           caseLabelList.push(caseLabel);
         }
@@ -457,7 +445,7 @@ const checkWalmartUSPalletLabel = async (req: Request, res: Response) => {
     const getUniqueValues = (array: string[]) => [...new Set(array)];
     const unqiueOrders = getUniqueValues(orders);
 
-    const existingList = await WalmartUSLabelCodes.find({ purchaseOrderNumber: { $in: unqiueOrders }, type: "Pallet" });
+    const existingList = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: { $in: unqiueOrders }, type: "Pallet" });
 
     res.status(200).send(existingList);
   } catch (err) {
@@ -470,7 +458,7 @@ const getWalmartUSPalletLabel = async (req: Request, res: Response) => {
     userAction(req.body.user, "getWalmartUSPalletLabel");
     const selectionForPallets = req.body.data as WalmartOrder[];
 
-    const caseSizes = await WalmartUSCaseSizes.find();
+    const caseSizes = await Customers.WalmartUSProducts.find();
     const palletLabelList = [];
 
     for (const selection of selectionForPallets) {
@@ -506,11 +494,11 @@ const getWalmartUSPalletLabel = async (req: Request, res: Response) => {
         date: new Date().toLocaleString(),
       };
 
-      await WalmartUSLabelCodes.create(palletLabel);
+      await Customers.WalmartUSLabelCodes.create(palletLabel);
 
       palletLabelList.push(palletLabel);
 
-      await WalmartUSOrders.findOneAndUpdate({ purchaseOrderNumber: selection.purchaseOrderNumber }, { hasPalletLabel: "Yes" });
+      await Customers.WalmartUSOrders.findOneAndUpdate({ purchaseOrderNumber: selection.purchaseOrderNumber }, { hasPalletLabel: "Yes" });
     }
 
     const pdfStream = await walmartPalletLabel(palletLabelList);
@@ -542,9 +530,9 @@ const getNewWalmartUSPalletLabel = async (req: Request, res: Response) => {
     const selectionForPallets = req.body.data.selection as WalmartOrder[];
 
     const orderList = existingList.map((item) => item.purchaseOrderNumber);
-    await WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: { $in: orderList }, type: "Pallet" });
+    await Customers.WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: { $in: orderList }, type: "Pallet" });
 
-    const caseSizes = await WalmartUSCaseSizes.find();
+    const caseSizes = await Customers.WalmartUSProducts.find();
     const palletLabelList = [];
 
     for (const selection of selectionForPallets) {
@@ -579,7 +567,7 @@ const getNewWalmartUSPalletLabel = async (req: Request, res: Response) => {
         date: new Date().toLocaleString(),
       };
 
-      await WalmartUSLabelCodes.create(palletLabel);
+      await Customers.WalmartUSLabelCodes.create(palletLabel);
 
       palletLabelList.push(palletLabel);
     }
@@ -594,23 +582,31 @@ const getNewWalmartUSPalletLabel = async (req: Request, res: Response) => {
   }
 };
 
-const addWalmartUSCaseSizes = async (req: Request, res: Response) => {
+const getWalmartUSProducts = async (req: Request, res: Response) => {
+  try {
+    const list = await Customers.WalmartUSProducts.find();
+    res.status(200).send(list);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+};
+const addWalmartUSProducts = async (req: Request, res: Response) => {
   try {
     const data = req.body.data;
-    await Customers.WalmartUSCaseSizes.updateOne({ walmartItem: data.walmartItem }, data, { upsert: true });
-    const list = await Customers.WalmartUSCaseSizes.find();
+    await Customers.WalmartUSProducts.updateOne({ walmartItem: data.walmartItem }, data, { upsert: true });
+    const list = await Customers.WalmartUSProducts.find();
     res.status(200).send(list);
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
   }
 };
-const deleteWalmartUSCaseSizes = async (req: Request, res: Response) => {
+const deleteWalmartUSProducts = async (req: Request, res: Response) => {
   try {
     const data = req.body.data;
     const dataList = data.map((item: any) => item.walmartItem);
-    await Customers.WalmartUSCaseSizes.deleteMany({ walmartItem: dataList });
-    const list = await Customers.WalmartUSCaseSizes.find();
+    await Customers.WalmartUSProducts.deleteMany({ walmartItem: dataList });
+    const list = await Customers.WalmartUSProducts.find();
     res.status(200).send(list);
   } catch (err) {
     console.log(err);
@@ -640,8 +636,8 @@ const postWalmartASN = async (req: Request, res: Response) => {
       const parsedPODate = parse(data[i].purchaseOrderDate, "MM/dd/yyyy", new Date());
       const poDate = format(parsedPODate, "yyyyMMdd");
 
-      const palletInfo = await WalmartUSLabelCodes.findOne({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Pallet" });
-      const caseInfo = await WalmartUSLabelCodes.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Case" });
+      const palletInfo = await Customers.WalmartUSLabelCodes.findOne({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Pallet" });
+      const caseInfo = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Case" });
 
       const getCaseStructure = () => {
         return caseInfo.map((item) => ({
@@ -905,7 +901,6 @@ const postWalmartASN = async (req: Request, res: Response) => {
 
 export default {
   getWalmartUSOrders,
-  getWalmartUSCaseSizes,
   postWalmartUSImportEDI,
   postWalmartUSImportB2B,
   postWalmartUSImportTracker,
@@ -922,7 +917,8 @@ export default {
   getWalmartUSPalletLabel,
   getExistingWalmartUSPalletLabel,
   getNewWalmartUSPalletLabel,
-  addWalmartUSCaseSizes,
-  deleteWalmartUSCaseSizes,
+  getWalmartUSProducts,
+  addWalmartUSProducts,
+  deleteWalmartUSProducts,
   postWalmartASN,
 };

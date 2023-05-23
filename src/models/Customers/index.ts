@@ -5,7 +5,7 @@ import WalmartUSOrders from "./WalmartUSOrders";
 import WalmartUSLocations from "./WalmartUSLocations";
 import WalmartCarrierCodes from "./WalmartCarrierCodes";
 import WalmartUSLabelCodes from "./WalmartUSLabelCodes";
-import WalmartUSCaseSizes from "./WalmartUSCaseSizes";
+import WalmartUSProducts from "./WalmartUSProducts";
 
 import HSNPriceList from "./HSNPriceList";
 
@@ -17,6 +17,6 @@ export default {
   WalmartUSLocations,
   WalmartCarrierCodes,
   WalmartUSLabelCodes,
-  WalmartUSCaseSizes,
+  WalmartUSProducts,
   HSNPriceList,
 };

@@ -35,7 +35,6 @@ const customerRoutes = (app: Express) => {
 
   //Walmart
   app.get("/api/get/customer/walmart_us/orders", [verifyToken], WalmartUS.getWalmartUSOrders);
-  app.get("/api/get/customer/walmart_us/case_sizes", [verifyToken], WalmartUS.getWalmartUSCaseSizes);
 
   app.post("/api/post/customer/walmart_us/import/edi", [verifyToken], WalmartUS.postWalmartUSImportEDI);
   app.post("/api/post/customer/walmart_us/import/b2b", [verifyToken], WalmartUS.postWalmartUSImportB2B);
@@ -57,8 +56,9 @@ const customerRoutes = (app: Express) => {
   app.post("/api/post/customer/walmart_us/order/pallet_label/existing", [verifyToken], WalmartUS.getExistingWalmartUSPalletLabel);
   app.post("/api/post/customer/walmart_us/order/pallet_label/new", [verifyToken], WalmartUS.getNewWalmartUSPalletLabel);
 
-  app.post("/api/post/customer/walmart_us/case_sizes/add", [verifyToken], WalmartUS.addWalmartUSCaseSizes);
-  app.post("/api/post/customer/walmart_us/case_sizes/delete", [verifyToken], WalmartUS.deleteWalmartUSCaseSizes);
+  app.get("/api/get/customer/walmart_us/products", [verifyToken], WalmartUS.getWalmartUSProducts);
+  app.post("/api/post/customer/walmart_us/products/add", [verifyToken], WalmartUS.addWalmartUSProducts);
+  app.post("/api/post/customer/walmart_us/products/delete", [verifyToken], WalmartUS.deleteWalmartUSProducts);
 
   app.post("/api/post/customer/walmart_us/asn", [verifyToken], WalmartUS.postWalmartASN);
 
