@@ -22,7 +22,7 @@ export interface DetailHierarchicalLevelHLLoop {
 
 export interface CarrierDetailsQuantityAndWeightTD1 {
   weight_qualifier_06: string;
-  weight_07: string;
+  weight_07: number;
   unit_or_basis_for_measurement_code_08: string;
 }
 
@@ -151,7 +151,7 @@ export interface TransactionSetHeaderST {
 
 export interface Summary {
   transaction_totals_CTT: TransactionTotalsCTT;
-  transaction_set_trailer_SE: TransactionSetTrailerSE;
+  transaction_set_trailer_SE?: TransactionSetTrailerSE;
 }
 
 export interface TransactionSetTrailerSE {

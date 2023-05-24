@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { format, parse, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import fs from "fs";
 import path from "path";
 
@@ -616,58 +616,64 @@ const deleteWalmartUSProducts = async (req: Request, res: Response) => {
 
 const postWalmartASN = async (req: Request, res: Response) => {
   try {
-    const date = req.body.data.date as Date;
     const data = req.body.data.selection as WalmartOrder[];
-
-    // const poNumberList = data.map((item) => item.purchaseOrderNumber);
-    // const labelList = await WalmartUSLabelCodes.find({ purchaseOrderNumber: { $in: poNumberList } });
-    // const groupByOrderKey = labelList.reduce((result, item) => {
-    //   const key = item.purchaseOrderNumber;
-    //   result[key] = [...(result[key] || []), item];
-    //   return result;
-    // }, Object.create(null));
-    // const groupByAddress: WalmartOrder[][] = Object.values(groupByOrderKey);
+    const date = new Date(req.body.data.date);
+    const newDate = format(date, "yyyy-MM-dd");
+    const newTime = format(date, "HH:mm");
 
     const asnList = [];
 
     for (let i = 0; i < data.length; i++) {
       const hasPallet = data[i].hasPalletLabel === "Yes";
       const orderStructureKey = hasPallet ? "hierarchical_level_HL_loop_tare" : "hierarchical_level_HL_loop_pack";
-      const parsedPODate = parse(data[i].purchaseOrderDate, "MM/dd/yyyy", new Date());
-      const poDate = format(parsedPODate, "yyyyMMdd");
+      const parsedPODate = new Date(data[i].purchaseOrderDate);
+      const poDate = format(parsedPODate, "yyyy-MM-dd");
 
       const palletInfo = await Customers.WalmartUSLabelCodes.findOne({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Pallet" });
       const caseInfo = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Case" });
 
-      const getCaseStructure = () => {
-        return caseInfo.map((item) => ({
-          marks_and_numbers_information_MAN: [
-            {
-              marks_and_numbers_qualifier_01: "GM",
-              marks_and_numbers_02: item.sscc,
-            },
-          ],
-          hierarchical_level_HL_loop: [
-            {
-              item_identification_LIN: {
-                product_service_id_qualifier_02: "UP",
-                product_service_id_03: "681131309349",
-                product_service_id_qualifier_04: "IN",
-                product_service_id_05: item.wmit,
-                product_service_id_qualifier_06: "VN",
-                product_service_id_07: item.vsn,
+      let transactionTotal = 2;
+
+      const getCaseStructure = async () => {
+        const caseList = [];
+
+        for (const item of caseInfo) {
+          transactionTotal += 2;
+          const productInfo = await Customers.WalmartUSProducts.findOne({ walmartItem: item.wmit });
+          const caseItem = {
+            marks_and_numbers_information_MAN: [
+              {
+                marks_and_numbers_qualifier_01: "GM",
+                marks_and_numbers_02: item.sscc,
               },
-              item_detail_shipment_SN1: {
-                number_of_units_shipped_02: 12,
-                unit_or_basis_for_measurement_code_03: "EA",
+            ],
+            hierarchical_level_HL_loop: [
+              {
+                item_identification_LIN: {
+                  product_service_id_qualifier_02: "UP",
+                  product_service_id_03: productInfo.productGTIN,
+                  product_service_id_qualifier_04: "IN",
+                  product_service_id_05: item.wmit,
+                  product_service_id_qualifier_06: "VN",
+                  product_service_id_07: item.vsn,
+                },
+                item_detail_shipment_SN1: {
+                  number_of_units_shipped_02: parseInt(productInfo.caseSize),
+                  unit_or_basis_for_measurement_code_03: "EA",
+                },
               },
-            },
-          ],
-        }));
+            ],
+          };
+          caseList.push(caseItem);
+        }
+
+        return caseList;
       };
 
-      const getOrderStructure = () => {
+      const getOrderStructure = async () => {
+        const caseStructure = await getCaseStructure();
         if (hasPallet) {
+          transactionTotal += 1;
           return [
             {
               marks_and_numbers_information_MAN: [
@@ -676,109 +682,10 @@ const postWalmartASN = async (req: Request, res: Response) => {
                   marks_and_numbers_02: palletInfo.sscc,
                 },
               ],
-              hierarchical_level_HL_loop: [
-                {
-                  marks_and_numbers_information_MAN: [
-                    {
-                      marks_and_numbers_qualifier_01: "GM",
-                      marks_and_numbers_02: "00081995202000151517",
-                    },
-                  ],
-                  hierarchical_level_HL_loop: [
-                    {
-                      item_identification_LIN: {
-                        product_service_id_qualifier_02: "UP",
-                        product_service_id_03: "681131309349",
-                        product_service_id_qualifier_04: "IN",
-                        product_service_id_05: "578680007",
-                        product_service_id_qualifier_06: "VN",
-                        product_service_id_07: "INHPGP100014175",
-                      },
-                      item_detail_shipment_SN1: {
-                        number_of_units_shipped_02: 12,
-                        unit_or_basis_for_measurement_code_03: "EA",
-                      },
-                    },
-                  ],
-                },
-                {
-                  marks_and_numbers_information_MAN: [
-                    {
-                      marks_and_numbers_qualifier_01: "GM",
-                      marks_and_numbers_02: "00081995202000151524",
-                    },
-                  ],
-                  hierarchical_level_HL_loop: [
-                    {
-                      item_identification_LIN: {
-                        product_service_id_qualifier_02: "UP",
-                        product_service_id_03: "681131309349",
-                        product_service_id_qualifier_04: "IN",
-                        product_service_id_05: "578680007",
-                        product_service_id_qualifier_06: "VN",
-                        product_service_id_07: "INHPGP100014175",
-                      },
-                      item_detail_shipment_SN1: {
-                        number_of_units_shipped_02: 12,
-                        unit_or_basis_for_measurement_code_03: "EA",
-                      },
-                    },
-                  ],
-                },
-              ],
+              hierarchical_level_HL_loop: caseStructure,
             },
           ];
-        } else
-          return [
-            {
-              marks_and_numbers_information_MAN: [
-                {
-                  marks_and_numbers_qualifier_01: "GM",
-                  marks_and_numbers_02: "00081995202000151517",
-                },
-              ],
-              hierarchical_level_HL_loop: [
-                {
-                  item_identification_LIN: {
-                    product_service_id_qualifier_02: "UP",
-                    product_service_id_03: "681131309349",
-                    product_service_id_qualifier_04: "IN",
-                    product_service_id_05: "578680007",
-                    product_service_id_qualifier_06: "VN",
-                    product_service_id_07: "INHPGP100014175",
-                  },
-                  item_detail_shipment_SN1: {
-                    number_of_units_shipped_02: 12,
-                    unit_or_basis_for_measurement_code_03: "EA",
-                  },
-                },
-              ],
-            },
-            {
-              marks_and_numbers_information_MAN: [
-                {
-                  marks_and_numbers_qualifier_01: "GM",
-                  marks_and_numbers_02: "00081995202000151524",
-                },
-              ],
-              hierarchical_level_HL_loop: [
-                {
-                  item_identification_LIN: {
-                    product_service_id_qualifier_02: "UP",
-                    product_service_id_03: "681131309349",
-                    product_service_id_qualifier_04: "IN",
-                    product_service_id_05: "578680007",
-                    product_service_id_qualifier_06: "VN",
-                    product_service_id_07: "INHPGP100014175",
-                  },
-                  item_detail_shipment_SN1: {
-                    number_of_units_shipped_02: 12,
-                    unit_or_basis_for_measurement_code_03: "EA",
-                  },
-                },
-              ],
-            },
-          ];
+        } else return caseStructure;
       };
 
       const asn: WalmartAdvanceShipNotice = {
@@ -790,8 +697,8 @@ const postWalmartASN = async (req: Request, res: Response) => {
           beginning_segment_for_ship_notice_BSN: {
             transaction_set_purpose_code_01: "00",
             shipment_identification_02: "654321",
-            date_03: date.toLocaleDateString(),
-            time_04: date.toLocaleTimeString(),
+            date_03: newDate,
+            time_04: newTime,
             hierarchical_structure_code_05: "0001",
           },
         },
@@ -801,7 +708,7 @@ const postWalmartASN = async (req: Request, res: Response) => {
               carrier_details_quantity_and_weight_TD1: [
                 {
                   weight_qualifier_06: "G",
-                  weight_07: data[i].actualWeight,
+                  weight_07: parseInt(data[i].actualWeight),
                   unit_or_basis_for_measurement_code_08: "LB",
                 },
               ],
@@ -821,11 +728,19 @@ const postWalmartASN = async (req: Request, res: Response) => {
                   reference_identification_qualifier_01: "CN",
                   reference_identification_02: data[i].carrierReference,
                 },
+                {
+                  reference_identification_qualifier_01: "LO",
+                  reference_identification_02: "0",
+                },
+                {
+                  reference_identification_qualifier_01: "AO",
+                  reference_identification_02: "0",
+                },
               ],
               date_time_reference_DTM: [
                 {
                   date_time_qualifier_01: "011",
-                  date_02: date.toLocaleDateString(),
+                  date_02: newDate,
                 },
               ],
               fob_related_instructions_FOB: {
@@ -869,10 +784,14 @@ const postWalmartASN = async (req: Request, res: Response) => {
                   reference_information_REF: [
                     {
                       reference_identification_qualifier_01: "IA",
-                      reference_identification_02: "546382721",
+                      reference_identification_02: data[i].internalVendorNumber,
+                    },
+                    {
+                      reference_identification_qualifier_01: "DP",
+                      reference_identification_02: data[i].departmentNumber,
                     },
                   ],
-                  [orderStructureKey]: getOrderStructure,
+                  [orderStructureKey]: await getOrderStructure(),
                 },
               ],
             },
@@ -880,11 +799,7 @@ const postWalmartASN = async (req: Request, res: Response) => {
         },
         summary: {
           transaction_totals_CTT: {
-            number_of_line_items_01: 7,
-          },
-          transaction_set_trailer_SE: {
-            number_of_included_segments_01: 36,
-            transaction_set_control_number_02: 1,
+            number_of_line_items_01: transactionTotal,
           },
         },
       };
