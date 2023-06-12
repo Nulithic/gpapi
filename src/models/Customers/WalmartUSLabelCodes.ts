@@ -16,6 +16,8 @@ const WalmartUSLabelCodes = mongoose.model(
       numberOfCases: Number,
       serialNumber: Number,
       type: String,
+      multiPallet: String,
+      multiPalletID: Number,
       sscc: String,
       date: String,
     },

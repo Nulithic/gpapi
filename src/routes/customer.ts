@@ -56,6 +56,11 @@ const customerRoutes = (app: Express) => {
   app.post("/api/post/customer/walmart_us/order/pallet_label/existing", [verifyToken], WalmartUS.getExistingWalmartUSPalletLabel);
   app.post("/api/post/customer/walmart_us/order/pallet_label/new", [verifyToken], WalmartUS.getNewWalmartUSPalletLabel);
 
+  app.post("/api/post/customer/walmart_us/order/pallet_label/multi/check", [verifyToken], WalmartUS.checkWalmartUSMultiPalletLabel);
+  app.post("/api/post/customer/walmart_us/order/pallet_label/multi/create", [verifyToken], WalmartUS.submitWalmartUSMultiPalletLabel);
+  app.post("/api/post/customer/walmart_us/order/pallet_label/multi/download", [verifyToken], WalmartUS.downloadWalmartUSMultiPalletLabel);
+  app.post("/api/post/customer/walmart_us/order/pallet_label/multi/delete", [verifyToken], WalmartUS.deleteWalmartUSMultiPalletLabel);
+
   app.get("/api/get/customer/walmart_us/products", [verifyToken], WalmartUS.getWalmartUSProducts);
   app.post("/api/post/customer/walmart_us/products/add", [verifyToken], WalmartUS.addWalmartUSProducts);
   app.post("/api/post/customer/walmart_us/products/delete", [verifyToken], WalmartUS.deleteWalmartUSProducts);

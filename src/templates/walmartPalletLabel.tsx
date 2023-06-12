@@ -100,7 +100,7 @@ const WalmartPalletLabel = ({ data }: { data: WalmartLabel[] }) => (
             </View>
 
             <View style={{ flexDirection: "column", width: "100%", height: "40%" }}>
-              <View style={{ flexDirection: "row", paddingTop: 10 }}>
+              <View style={{ flexDirection: "row", paddingTop: 10, height: "100%" }}>
                 <View style={styles.infoColumn}>
                   <Text style={styles.infoTitle}>DC#</Text>
                   <Text style={styles.infoText}>{item.distributionCenterNumber}</Text>
@@ -119,14 +119,18 @@ const WalmartPalletLabel = ({ data }: { data: WalmartLabel[] }) => (
                 </View>
               </View>
 
-              <View style={{ flexDirection: "column", justifyContent: "space-evenly", paddingTop: 10 }}>
-                <View style={{ flexDirection: "row", paddingLeft: 5, paddingBottom: 20 }}>
+              <View style={{ flexDirection: "column", paddingTop: 10, justifyContent: "space-between", height: "100%" }}>
+                <View style={{ flexDirection: "row", paddingLeft: 5 }}>
                   <Text style={styles.infoTitle}>WMIT:</Text>
                   <Text style={styles.infoText}>{item.wmit}</Text>
                 </View>
                 <View style={{ flexDirection: "row", paddingLeft: 5 }}>
                   <Text style={styles.infoTitle}># of Cases:</Text>
                   <Text style={styles.infoText}>{item.numberOfCases}</Text>
+                </View>
+                <View style={{ flexDirection: "row", paddingLeft: 5 }}>
+                  <Text style={styles.infoTitle}>Pallet #:</Text>
+                  <Text style={styles.infoText}>{item.multiPalletID + 1 ?? 1}</Text>
                 </View>
               </View>
             </View>

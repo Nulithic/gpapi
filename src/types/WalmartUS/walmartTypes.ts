@@ -82,18 +82,21 @@ export interface SelectionWithLabels extends WalmartOrder {
 }
 
 export interface WalmartLabel {
-  purchaseOrderNumber: string;
-  buyingParty: string;
-  buyingPartyStreet: string;
-  buyingPartyAddress: string;
-  distributionCenterNumber: string;
-  purchaseOrderType: string;
-  departmentNumber: string;
-  wmit: string;
+  _id?: string;
+  purchaseOrderNumber?: string;
+  buyingParty?: string;
+  buyingPartyStreet?: string;
+  buyingPartyAddress?: string;
+  distributionCenterNumber?: string;
+  purchaseOrderType?: string;
+  departmentNumber?: string;
+  wmit?: string;
   vsn?: string;
   numberOfCases?: number;
-  serialNumber: number;
-  type: string;
-  sscc: string;
-  date: string;
+  serialNumber?: number;
+  type?: string;
+  multiPallet?: string;
+  multiPalletID?: number;
+  sscc?: string;
+  date?: string;
 }

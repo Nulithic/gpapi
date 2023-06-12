@@ -348,6 +348,7 @@ const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
             vsn: item.baselineItemDataPO1.productServiceId11,
             serialNumber: parseInt(ssccData.serialNumber),
             type: "Case",
+            multiPallet: "No",
             sscc: ssccData.sscc,
             date: new Date().toLocaleString(),
           };
@@ -416,6 +417,7 @@ const getNewWalmartUSCaseLabel = async (req: Request, res: Response) => {
             vsn: item.baselineItemDataPO1.productServiceId11,
             serialNumber: parseInt(ssccData.serialNumber),
             type: "Case",
+            multiPallet: "No",
             sscc: ssccData.sscc,
             date: new Date().toLocaleString(),
           };
@@ -490,6 +492,7 @@ const getWalmartUSPalletLabel = async (req: Request, res: Response) => {
         numberOfCases: caseAmount,
         serialNumber: parseInt(ssccData.serialNumber),
         type: "Pallet",
+        multiPallet: "No",
         sscc: ssccData.sscc,
         date: new Date().toLocaleString(),
       };
@@ -513,7 +516,9 @@ const getWalmartUSPalletLabel = async (req: Request, res: Response) => {
 const getExistingWalmartUSPalletLabel = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "getExistingWalmartUSPalletLabel");
+
     const existingList = req.body.data as WalmartLabel[];
+
     const pdfStream = await walmartPalletLabel(existingList);
     res.setHeader("Content-Type", "application/pdf");
     pdfStream.pipe(res);
@@ -563,6 +568,7 @@ const getNewWalmartUSPalletLabel = async (req: Request, res: Response) => {
         numberOfCases: caseAmount,
         serialNumber: parseInt(ssccData.serialNumber),
         type: "Pallet",
+        multiPallet: "No",
         sscc: ssccData.sscc,
         date: new Date().toLocaleString(),
       };
@@ -576,6 +582,128 @@ const getNewWalmartUSPalletLabel = async (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/pdf");
     pdfStream.pipe(res);
     pdfStream.on("end", () => console.log(`New Walmart Pallet Label CREATED - ${new Date().toLocaleString()}`));
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+
+const checkWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "checkWalmartUSMultiPalletLabel");
+    const data = req.body;
+
+    const linesItems = [];
+    for (const item of data.Order.Lines) {
+      const product = await Customers.WalmartUSProducts.findOne({ sku: item.SKU });
+      linesItems.push({ sku: item.SKU, upc: item.Walmart, qty: item.Quantity, caseCount: item.Quantity / parseInt(product.caseSize) });
+    }
+    const order = {
+      purchaseOrderNumber: data.CustomerReference,
+      lineItems: linesItems,
+    };
+
+    const totalCases = order.lineItems.reduce((previous, current) => previous + current.caseCount, 0);
+    const caseLabels = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data.CustomerReference, type: "Case" });
+    const ssccList = caseLabels.map((item) => item.sscc);
+
+    if (totalCases !== caseLabels.length) {
+      console.log("Total cases do not match with case labels.");
+      console.log(`DEAR: ${totalCases}`);
+      console.log(`GP Apps: ${caseLabels.length}`);
+      return res.status(500).send();
+    }
+
+    await Customers.WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: data.CustomerReference, type: "Pallet", multiPallet: "No" });
+
+    const multiPallet = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data.CustomerReference, type: "Pallet", multiPallet: "Yes" });
+    if (multiPallet.length > 0) {
+      console.log("A multi pallet already exists for this order.");
+      return res.status(500).send();
+    }
+
+    return res.status(200).send(ssccList);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send(err);
+  }
+};
+const submitWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "submitWalmartUSMultiPalletLabel");
+    const pallets = req.body.pallets as Array<Array<String>>;
+
+    const orderData = await Customers.WalmartUSLabelCodes.findOne({ sscc: pallets[0][0] });
+
+    for (let i = 0; i < pallets.length; i++) {
+      let itemList: string[] = [];
+
+      for (let k = 0; k < pallets[i].length; k++) {
+        const item = await Customers.WalmartUSLabelCodes.findOne({ sscc: pallets[i][k] }, { wmit: 1 });
+        itemList.push(item.wmit);
+
+        await Customers.WalmartUSLabelCodes.findOneAndUpdate({ sscc: pallets[i][k] }, { $set: { multiPallet: "Yes", multiPalletID: i } });
+      }
+
+      const checkWalmartItem = itemList.every((item) => item === itemList[0]);
+
+      const ssccData = await walmartSSCC();
+
+      const palletLabel = {
+        purchaseOrderNumber: orderData.purchaseOrderNumber,
+        buyingParty: orderData.buyingParty,
+        buyingPartyStreet: orderData.buyingPartyStreet,
+        buyingPartyAddress: orderData.buyingPartyAddress,
+        distributionCenterNumber: orderData.distributionCenterNumber,
+        purchaseOrderType: orderData.purchaseOrderType,
+        departmentNumber: orderData.departmentNumber,
+        wmit: checkWalmartItem ? itemList[0] : "MIXED PALLET",
+        numberOfCases: pallets[i].length,
+        serialNumber: parseInt(ssccData.serialNumber),
+        type: "Pallet",
+        multiPallet: "Yes",
+        multiPalletID: i,
+        sscc: ssccData.sscc,
+        date: new Date().toLocaleString(),
+      };
+
+      await Customers.WalmartUSLabelCodes.create(palletLabel);
+    }
+
+    return res.status(200).send("Success");
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send(err);
+  }
+};
+const downloadWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "downloadWalmartUSMultiPalletLabel");
+
+    const multiPalletList = req.body.data as WalmartLabel[];
+
+    const pdfStream = await walmartPalletLabel(multiPalletList);
+    res.setHeader("Content-Type", "application/pdf");
+    pdfStream.pipe(res);
+    pdfStream.on("end", () => console.log(`Walmart Multi Pallet Label CREATED - ${new Date().toLocaleString()}`));
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+const deleteWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "deleteWalmartUSMultiPalletLabel");
+    const multiPalletList = req.body.data as WalmartLabel[];
+    const idList = multiPalletList.map((item) => item._id);
+
+    await Customers.WalmartUSLabelCodes.deleteMany({ _id: { $in: idList } });
+    await Customers.WalmartUSLabelCodes.updateMany(
+      { purchaseOrderNumber: multiPalletList[0].purchaseOrderNumber, type: "Case" },
+      { $set: { multiPallet: "No", multiPalletID: 0 } }
+    );
+
+    res.status(200).send();
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
@@ -832,6 +960,10 @@ export default {
   getWalmartUSPalletLabel,
   getExistingWalmartUSPalletLabel,
   getNewWalmartUSPalletLabel,
+  checkWalmartUSMultiPalletLabel,
+  submitWalmartUSMultiPalletLabel,
+  downloadWalmartUSMultiPalletLabel,
+  deleteWalmartUSMultiPalletLabel,
   getWalmartUSProducts,
   addWalmartUSProducts,
   deleteWalmartUSProducts,
