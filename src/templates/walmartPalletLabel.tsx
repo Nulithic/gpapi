@@ -130,7 +130,7 @@ const WalmartPalletLabel = ({ data }: { data: WalmartLabel[] }) => (
                 </View>
                 <View style={{ flexDirection: "row", paddingLeft: 5 }}>
                   <Text style={styles.infoTitle}>Pallet #:</Text>
-                  <Text style={styles.infoText}>{item.multiPalletID + 1 ?? 1}</Text>
+                  <Text style={styles.infoText}>{item.multiPalletID ? item.multiPalletID + 1 : 1}</Text>
                 </View>
               </View>
             </View>

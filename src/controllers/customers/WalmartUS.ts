@@ -3,7 +3,8 @@ import { format, parseISO } from "date-fns";
 import fs from "fs";
 import path from "path";
 
-import { walmartTranslate850, walmartMap850 } from "api/Stedi";
+import { walmartTranslate850, walmartMap850, walmartTranslate856 } from "api/Stedi";
+import { mftAuthorization, mftSendMessage } from "api/MFTGateway";
 import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
 import { WalmartAdvanceShipNotice } from "types/WalmartUS/stedi856";
@@ -611,7 +612,7 @@ const checkWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
       console.log("Total cases do not match with case labels.");
       console.log(`DEAR: ${totalCases}`);
       console.log(`GP Apps: ${caseLabels.length}`);
-      return res.status(500).send();
+      return res.status(400).send("Total cases do not match with case labels.");
     }
 
     await Customers.WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: data.CustomerReference, type: "Pallet", multiPallet: "No" });
@@ -619,7 +620,7 @@ const checkWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
     const multiPallet = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data.CustomerReference, type: "Pallet", multiPallet: "Yes" });
     if (multiPallet.length > 0) {
       console.log("A multi pallet already exists for this order.");
-      return res.status(500).send();
+      return res.status(400).send("A multi pallet already exists for this order.");
     }
 
     return res.status(200).send(ssccList);
@@ -668,6 +669,8 @@ const submitWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
       };
 
       await Customers.WalmartUSLabelCodes.create(palletLabel);
+
+      await Customers.WalmartUSOrders.findOneAndUpdate({ purchaseOrderNumber: orderData.purchaseOrderNumber }, { hasPalletLabel: "Yes" });
     }
 
     return res.status(200).send("Success");
@@ -757,15 +760,19 @@ const postWalmartASN = async (req: Request, res: Response) => {
       const parsedPODate = new Date(data[i].purchaseOrderDate);
       const poDate = format(parsedPODate, "yyyy-MM-dd");
 
-      const palletInfo = await Customers.WalmartUSLabelCodes.findOne({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Pallet" });
+      const palletInfo = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Pallet" });
       const caseInfo = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Case" });
 
       let transactionTotal = 2;
 
-      const getCaseStructure = async () => {
+      const getCaseStructure = async (palletID?: number) => {
         const caseList = [];
+        let cases;
 
-        for (const item of caseInfo) {
+        if (palletID !== null) cases = caseInfo.filter((item) => item.multiPalletID === palletID);
+        else cases = caseInfo;
+
+        for (const item of cases) {
           transactionTotal += 2;
           const productInfo = await Customers.WalmartUSProducts.findOne({ walmartItem: item.wmit });
           const caseItem = {
@@ -799,21 +806,27 @@ const postWalmartASN = async (req: Request, res: Response) => {
       };
 
       const getOrderStructure = async () => {
-        const caseStructure = await getCaseStructure();
         if (hasPallet) {
-          transactionTotal += 1;
-          return [
-            {
+          const pallets = [];
+
+          for (const item of palletInfo) {
+            transactionTotal += 1;
+
+            const pallet = {
               marks_and_numbers_information_MAN: [
                 {
                   marks_and_numbers_qualifier_01: "GM",
-                  marks_and_numbers_02: palletInfo.sscc,
+                  marks_and_numbers_02: item.sscc,
                 },
               ],
-              hierarchical_level_HL_loop: caseStructure,
-            },
-          ];
-        } else return caseStructure;
+              hierarchical_level_HL_loop: await getCaseStructure(palletInfo.length > 1 ? item.multiPalletID : null),
+            };
+
+            pallets.push(pallet);
+          }
+
+          return pallets;
+        } else return await getCaseStructure();
       };
 
       const asn: WalmartAdvanceShipNotice = {
@@ -935,7 +948,27 @@ const postWalmartASN = async (req: Request, res: Response) => {
       asnList.push(asn);
     }
 
-    res.status(200).send(asnList);
+    const tokens = await mftAuthorization();
+
+    const responseList = [];
+
+    for (const asn of asnList) {
+      const edi = await walmartTranslate856(asn);
+      const poNumber = asn.detail.hierarchical_level_HL_loop[0].hierarchical_level_HL_loop[0].purchase_order_reference_PRF.purchase_order_number_01;
+      const headers = {
+        Authorization: tokens.api_token,
+        "AS2-From": "GreenProjectWalmartUS",
+        "AS2-To": "08925485US00",
+        Subject: "Walmart ASN - Green Project",
+        "Attachment-Name": `${poNumber}-ASN.txt`,
+        "Content-Type": "text/plain",
+      };
+
+      const response = await mftSendMessage(headers, edi);
+      responseList.push(response);
+    }
+
+    res.status(200).send(responseList);
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
