@@ -1,4 +1,8 @@
 export interface WalmartPurchaseOrder {
+  interchangeHeader: InterchangeHeader;
+  groupHeader: GroupHeader;
+  groupTrailer: GroupTrailer;
+  interchangeTrailer: InterchangeTrailer;
   transactionSetHeaderST: TransactionSetHeaderST;
   beginningSegmentForPurchaseOrderBEG: BeginningSegmentForPurchaseOrderBEG;
   currencyCUR: CurrencyCUR;
@@ -15,6 +19,45 @@ export interface WalmartPurchaseOrder {
   transactionSetTrailerSE: TransactionSetTrailerSE;
 }
 
+export interface GroupHeader {
+  functionalIdentifierCode: string;
+  applicationSenderCode: string;
+  applicationReceiverCode: string;
+  controlNumber: string;
+  date: Date;
+  time: string;
+  agencyCode: string;
+  release: string;
+}
+
+export interface GroupTrailer {
+  numberOfTransactions: string;
+  controlNumber: string;
+}
+
+export interface InterchangeHeader {
+  senderQualifier: string;
+  senderId: string;
+  receiverQualifier: string;
+  receiverId: string;
+  controlNumber: string;
+  authorizationInformationQualifier: string;
+  authorizationInformation: string;
+  securityQualifier: string;
+  securityInformation: string;
+  date: Date;
+  time: string;
+  repetitionSeparator: string;
+  acknowledgementRequestedCode: string;
+  usageIndicatorCode: string;
+  componentSeparator: string;
+  controlVersionNumber: string;
+}
+
+export interface InterchangeTrailer {
+  numberOfFunctionalGroups: string;
+  controlNumber: string;
+}
 export interface BaselineItemDataPO1Loop {
   baselineItemDataPO1: BaselineItemDataPO1;
   itemPhysicalDetailsPO4: ItemPhysicalDetailsPO4[];

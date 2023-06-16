@@ -1,5 +1,57 @@
 import mongoose from "mongoose";
 
+const GroupHeader = new mongoose.Schema(
+  {
+    functionalIdentifierCode: String,
+    applicationSenderCode: String,
+    applicationReceiverCode: String,
+    controlNumber: String,
+    date: Date,
+    time: String,
+    agencyCode: String,
+    release: String,
+  },
+  { _id: false }
+);
+
+const GroupTrailer = new mongoose.Schema(
+  {
+    numberOfTransactions: String,
+    controlNumber: String,
+  },
+  { _id: false }
+);
+
+const InterchangeHeader = new mongoose.Schema(
+  {
+    senderQualifier: String,
+    senderId: String,
+    receiverQualifier: String,
+    receiverId: String,
+    controlNumber: String,
+    authorizationInformationQualifier: String,
+    authorizationInformation: String,
+    securityQualifier: String,
+    securityInformation: String,
+    date: Date,
+    time: String,
+    repetitionSeparator: String,
+    acknowledgementRequestedCode: String,
+    usageIndicatorCode: String,
+    componentSeparator: String,
+    controlVersionNumber: String,
+  },
+  { _id: false }
+);
+
+const InterchangeTrailer = new mongoose.Schema(
+  {
+    numberOfFunctionalGroups: String,
+    controlNumber: String,
+  },
+  { _id: false }
+);
+
 const TransactionSetHeaderST = new mongoose.Schema(
   {
     transactionSetIdentifierCode01: String,
@@ -134,6 +186,10 @@ const WalmartUSOrders = mongoose.model(
   "WalmartUSOrders",
   new mongoose.Schema(
     {
+      interchangeHeader: InterchangeHeader,
+      groupHeader: GroupHeader,
+      groupTrailer: GroupTrailer,
+      interchangeTrailer: InterchangeTrailer,
       transactionSetHeaderST: TransactionSetHeaderST,
       beginningSegmentForPurchaseOrderBEG: BeginningSegmentForPurchaseOrderBEG,
       currencyCUR: CurrencyCUR,

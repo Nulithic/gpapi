@@ -3,7 +3,7 @@ import { format, parseISO } from "date-fns";
 import fs from "fs";
 import path from "path";
 
-import { walmartTranslate850, walmartMap850, walmartTranslate856 } from "api/Stedi";
+import { walmartTranslate850, walmartMap850, walmartTranslate856, walmartTranslate997 } from "api/Stedi";
 import { mftAuthorization, mftSendMessage } from "api/MFTGateway";
 import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
@@ -18,6 +18,7 @@ import walmartUnderlyingBOL from "templates/walmartUnderlyingBOL";
 import walmartCaseLabel from "templates/walmartCaseLabel";
 import walmartPalletLabel from "templates/walmartPalletLabel";
 import walmartMasterBOL from "templates/walmartMasterBOL";
+import walmartCG from "utilities/walmartCG";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {
@@ -74,6 +75,147 @@ const getWalmartUSOrders = async (req: Request, res: Response) => {
   }
 };
 
+const postWalmartUSImportMFT = async (req: Request, res: Response) => {
+  try {
+    userAction(req.body.user, "postWalmartUSImportMFT");
+
+    // get edi
+    const filePath = path.join(__dirname, "orders.txt");
+    const dataEDI = fs.readFileSync(filePath, "utf8");
+    //const dataEDI = await mftReceiveMessage();
+
+    // translate and map edi to json
+    const translationData = await walmartTranslate850(dataEDI);
+    const data = (await walmartMap850(translationData)) as WalmartOrder[];
+
+    // save to local db
+    const ak2List = [];
+    for (const item of data) {
+      await Customers.WalmartUSOrders.updateOne(
+        { purchaseOrderNumber: item.purchaseOrderNumber },
+        {
+          ...item,
+          actualWeight: "",
+          billOfLading: "",
+          carrierSCAC: "",
+          carrierReference: "",
+          carrierClass: "",
+          nmfc: "",
+          floorOrPallet: "",
+          height: "",
+          width: "",
+          length: "",
+          invoiceDate: "",
+          loadDestination: "",
+          mustArriveByDate: "",
+          numberOfCartons: "",
+          saleOrderNumber: "",
+          shipDateScheduled: "",
+          archived: "No",
+          asnSent: "No",
+          invoiceSent: "No",
+          hasPalletLabel: "No",
+        },
+        { upsert: true }
+      );
+
+      const ak2 = {
+        transaction_set_response_header_AK2: {
+          transaction_set_identifier_code_01: "850",
+          transaction_set_control_number_02: item.transactionSetHeaderST.transactionSetControlNumber02,
+        },
+        transaction_set_response_trailer_AK5: {
+          transaction_set_acknowledgment_code_01: "A",
+        },
+      };
+
+      ak2List.push(ak2);
+    }
+
+    // create 997 json
+    const control = await walmartCG();
+    const envelope = {
+      interchangeHeader: {
+        authorizationInformationQualifier: data[0].interchangeHeader.authorizationInformationQualifier,
+        authorizationInformation: data[0].interchangeHeader.authorizationInformation,
+        securityQualifier: data[0].interchangeHeader.securityQualifier,
+        securityInformation: data[0].interchangeHeader.securityInformation,
+        senderQualifier: data[0].interchangeHeader.senderQualifier,
+        senderId: data[0].interchangeHeader.senderId,
+        receiverQualifier: data[0].interchangeHeader.receiverQualifier,
+        receiverId: data[0].interchangeHeader.receiverId,
+        date: data[0].interchangeHeader.date,
+        time: data[0].interchangeHeader.time,
+        repetitionSeparator: data[0].interchangeHeader.repetitionSeparator,
+        controlVersionNumber: data[0].interchangeHeader.controlVersionNumber,
+        controlNumber: control.serialNumber.toString(),
+        acknowledgementRequestedCode: data[0].interchangeHeader.acknowledgementRequestedCode,
+        usageIndicatorCode: data[0].interchangeHeader.usageIndicatorCode,
+        componentSeparator: data[0].interchangeHeader.componentSeparator,
+      },
+      groupHeader: {
+        functionalIdentifierCode: data[0].groupHeader.functionalIdentifierCode,
+        applicationSenderCode: data[0].groupHeader.applicationSenderCode,
+        applicationReceiverCode: data[0].groupHeader.applicationReceiverCode,
+        date: data[0].groupHeader.date,
+        time: data[0].groupHeader.time,
+        controlNumber: control.serialNumber.toString(),
+        agencyCode: data[0].groupHeader.agencyCode,
+        release: data[0].groupHeader.release,
+      },
+      groupTrailer: {
+        numberOfTransactions: data[0].groupTrailer.numberOfTransactions,
+        controlNumber: control.serialNumber.toString(),
+      },
+      interchangeTrailer: {
+        numberOfFunctionalGroups: data[0].interchangeTrailer.numberOfFunctionalGroups,
+        controlNumber: control.serialNumber.toString(),
+      },
+    };
+    const input = {
+      heading: {
+        transaction_set_header_ST: {
+          transaction_set_identifier_code_01: "997",
+          transaction_set_control_number_02: 1,
+        },
+        functional_group_response_header_AK1: {
+          functional_identifier_code_01: "PO",
+          group_control_number_02: parseInt(data[0].interchangeHeader.controlNumber),
+        },
+        transaction_set_response_header_AK2_loop: ak2List,
+        functional_group_response_trailer_AK9: {
+          functional_group_acknowledge_code_01: "A",
+          number_of_transaction_sets_included_02: 1,
+          number_of_received_transaction_sets_03: 1,
+          number_of_accepted_transaction_sets_04: 1,
+        },
+        transaction_set_trailer_SE: {
+          number_of_included_segments_01: 6,
+          transaction_set_control_number_02: 1,
+        },
+      },
+    };
+
+    // translate 997 json to edi
+    const edi997 = await walmartTranslate997(input, envelope);
+
+    // transmit 997 edi to partner
+    const tokens = await mftAuthorization();
+    const headers = {
+      Authorization: tokens.api_token,
+      "AS2-From": "GreenProjectWalmartUS",
+      "AS2-To": "08925485US00",
+      Subject: "Walmart ACK - Green Project",
+      "Attachment-Name": `${input.heading.functional_group_response_header_AK1.group_control_number_02}-ACK.txt`,
+      "Content-Type": "text/plain",
+    };
+    const response = await mftSendMessage(headers, edi997);
+
+    res.status(200).send(response);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+};
 const postWalmartUSImportEDI = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postWalmartImportEDI");
@@ -83,7 +225,33 @@ const postWalmartUSImportEDI = async (req: Request, res: Response) => {
     const data = await walmartMap850(translationData);
 
     for (const item of data) {
-      await Customers.WalmartUSOrders.updateOne({ purchaseOrderNumber: item.purchaseOrderNumber }, item, { upsert: true });
+      await Customers.WalmartUSOrders.updateOne(
+        { purchaseOrderNumber: item.purchaseOrderNumber },
+        {
+          ...item,
+          actualWeight: "",
+          billOfLading: "",
+          carrierSCAC: "",
+          carrierReference: "",
+          carrierClass: "",
+          nmfc: "",
+          floorOrPallet: "",
+          height: "",
+          width: "",
+          length: "",
+          invoiceDate: "",
+          loadDestination: "",
+          mustArriveByDate: "",
+          numberOfCartons: "",
+          saleOrderNumber: "",
+          shipDateScheduled: "",
+          archived: "No",
+          asnSent: "No",
+          invoiceSent: "No",
+          hasPalletLabel: "No",
+        },
+        { upsert: true }
+      );
     }
 
     res.status(200).send(data);
@@ -974,9 +1142,19 @@ const postWalmartASN = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
+const postWalmartInvoice = async (req: Request, res: Response) => {
+  try {
+    const data = req.body.data.selection as WalmartOrder[];
+    res.status(200).send();
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
 
 export default {
   getWalmartUSOrders,
+  postWalmartUSImportMFT,
   postWalmartUSImportEDI,
   postWalmartUSImportB2B,
   postWalmartUSImportTracker,
@@ -1001,4 +1179,5 @@ export default {
   addWalmartUSProducts,
   deleteWalmartUSProducts,
   postWalmartASN,
+  postWalmartInvoice,
 };

@@ -5,6 +5,24 @@ const stediHeaders = {
   Authorization: `Key ${process.env.STEDI_API_KEY}`,
 };
 
+export const walmartTranslate810 = async (data: any, envelope: any) => {
+  try {
+    const response = await axios.post(
+      "https://edi-translate.us.stedi.com/2022-01-01/x12/from-json",
+      {
+        guideId: "01H30DJR3G430C3JFR135KHBF5",
+        input: data,
+        envelope: envelope,
+      },
+      { headers: stediHeaders }
+    );
+
+    return response.data.output;
+  } catch (err) {
+    console.log(err);
+    return err.message;
+  }
+};
 export const walmartTranslate850 = async (data: string) => {
   try {
     const response = await axios.post(
@@ -77,6 +95,25 @@ export const walmartTranslate856 = async (data: any) => {
     return err.message;
   }
 };
+export const walmartTranslate997 = async (data: any, envelope: any) => {
+  try {
+    const response = await axios.post(
+      "https://edi-translate.us.stedi.com/2022-01-01/x12/from-json",
+      {
+        guideId: "01H2XPVT1BHG3BBGZJX1A627K5",
+        input: data,
+        envelope: envelope,
+      },
+      { headers: stediHeaders }
+    );
+
+    return response.data.output;
+  } catch (err) {
+    console.log(err);
+    return err.message;
+  }
+};
+
 export const walmartMap850 = async (translationData: string) => {
   try {
     const startTime = performance.now();
@@ -95,7 +132,6 @@ export const walmartMap850 = async (translationData: string) => {
     return err.message;
   }
 };
-
 export const walmartMap810 = async (translationData: string) => {
   try {
     const data = JSON.stringify(translationData);

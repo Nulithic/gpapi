@@ -36,6 +36,7 @@ const customerRoutes = (app: Express) => {
   //Walmart
   app.get("/api/get/customer/walmart_us/orders", [verifyToken], WalmartUS.getWalmartUSOrders);
 
+  app.post("/api/post/customer/walmart_us/import/mft", [verifyToken], WalmartUS.postWalmartUSImportMFT);
   app.post("/api/post/customer/walmart_us/import/edi", [verifyToken], WalmartUS.postWalmartUSImportEDI);
   app.post("/api/post/customer/walmart_us/import/b2b", [verifyToken], WalmartUS.postWalmartUSImportB2B);
   app.post("/api/post/customer/walmart_us/import/tracker", [verifyToken], WalmartUS.postWalmartUSImportTracker);
@@ -66,6 +67,7 @@ const customerRoutes = (app: Express) => {
   app.post("/api/post/customer/walmart_us/products/delete", [verifyToken], WalmartUS.deleteWalmartUSProducts);
 
   app.post("/api/post/customer/walmart_us/asn", [verifyToken], WalmartUS.postWalmartASN);
+  app.post("/api/post/customer/walmart_us/invoice", [verifyToken], WalmartUS.postWalmartInvoice);
 
   //HSN
   app.post("/api/post/customer/hsn/import", [verifyToken], HSN.postHSNImport);
