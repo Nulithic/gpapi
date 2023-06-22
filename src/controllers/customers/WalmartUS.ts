@@ -218,7 +218,7 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
       "Content-Type": "text/plain",
     };
     const response = await mftSendMessage(headers, edi997);
-    io.to(socketID).emit("postWalmartImportMFT", `Message sent successfully.`);
+    io.to(socketID).emit("postWalmartImportMFT", response.message);
 
     res.status(200).send(response);
   } catch (err) {
@@ -1133,9 +1133,50 @@ const postWalmartASN = async (req: Request, res: Response) => {
     const responseList = [];
 
     for (const asn of asnList) {
-      const edi = await walmartTranslate856(asn);
-      io.to(socketID).emit("postWalmartASN", "Translate completed.");
+      const control = await walmartCG();
       const poNumber = asn.detail.hierarchical_level_HL_loop[0].hierarchical_level_HL_loop[0].purchase_order_reference_PRF.purchase_order_number_01;
+      const order = await Customers.WalmartUSOrders.findOne({ purchaseOrderNumber: poNumber });
+
+      const envelope = {
+        interchangeHeader: {
+          authorizationInformationQualifier: order.interchangeHeader.authorizationInformationQualifier,
+          authorizationInformation: order.interchangeHeader.authorizationInformation,
+          securityQualifier: order.interchangeHeader.securityQualifier,
+          securityInformation: order.interchangeHeader.securityInformation,
+          senderQualifier: order.interchangeHeader.senderQualifier,
+          senderId: order.interchangeHeader.senderId,
+          receiverQualifier: order.interchangeHeader.receiverQualifier,
+          receiverId: order.interchangeHeader.receiverId,
+          date: order.interchangeHeader.date,
+          time: order.interchangeHeader.time,
+          repetitionSeparator: order.interchangeHeader.repetitionSeparator,
+          controlVersionNumber: order.interchangeHeader.controlVersionNumber,
+          controlNumber: control.serialNumber.toString(),
+          acknowledgementRequestedCode: order.interchangeHeader.acknowledgementRequestedCode,
+          usageIndicatorCode: order.interchangeHeader.usageIndicatorCode,
+          componentSeparator: order.interchangeHeader.componentSeparator,
+        },
+        groupHeader: {
+          functionalIdentifierCode: order.groupHeader.functionalIdentifierCode,
+          applicationSenderCode: order.groupHeader.applicationSenderCode,
+          applicationReceiverCode: order.groupHeader.applicationReceiverCode,
+          date: order.groupHeader.date,
+          time: order.groupHeader.time,
+          controlNumber: control.serialNumber.toString(),
+          agencyCode: order.groupHeader.agencyCode,
+          release: order.groupHeader.release,
+        },
+        groupTrailer: {
+          numberOfTransactions: "1",
+          controlNumber: control.serialNumber.toString(),
+        },
+        interchangeTrailer: {
+          numberOfFunctionalGroups: "1",
+          controlNumber: control.serialNumber.toString(),
+        },
+      };
+      const edi = await walmartTranslate856(asn, envelope);
+      io.to(socketID).emit("postWalmartASN", `${poNumber} - Translate completed.`);
       const headers = {
         Authorization: tokens.api_token,
         "AS2-From": "GreenProjectWalmartUS",
@@ -1146,7 +1187,7 @@ const postWalmartASN = async (req: Request, res: Response) => {
       };
 
       const response = await mftSendMessage(headers, edi);
-      io.to(socketID).emit("postWalmartASN", "Message sent.");
+      io.to(socketID).emit("postWalmartASN", `${poNumber} - ${response.message}`);
       responseList.push(response);
     }
 
@@ -1313,9 +1354,8 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
 
     for (const invoice of invoiceList) {
       const control = await walmartCG();
-      const order = await Customers.WalmartUSOrders.findOne({
-        purchaseOrderNumber: invoice.heading.beginning_segment_for_invoice_BIG.purchase_order_number_04,
-      });
+      const poNumber = invoice.heading.beginning_segment_for_invoice_BIG.purchase_order_number_04;
+      const order = await Customers.WalmartUSOrders.findOne({ purchaseOrderNumber: poNumber });
 
       const envelope = {
         interchangeHeader: {
@@ -1357,8 +1397,7 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
       };
 
       const edi = await walmartTranslate810(invoice, envelope);
-      io.to(socketID).emit("postWalmartInvoice", "Translate completed.");
-      const poNumber = invoice.heading.beginning_segment_for_invoice_BIG.purchase_order_number_04;
+      io.to(socketID).emit("postWalmartInvoice", `${poNumber} - Translate completed.`);
       const headers = {
         Authorization: tokens.api_token,
         "AS2-From": "GreenProjectWalmartUS",
@@ -1369,7 +1408,7 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
       };
 
       const response = await mftSendMessage(headers, edi);
-      io.to(socketID).emit("postWalmartInvoice", "Message sent.");
+      io.to(socketID).emit("postWalmartInvoice", `${poNumber} - ${response.message}`);
       responseList.push(response);
     }
 
