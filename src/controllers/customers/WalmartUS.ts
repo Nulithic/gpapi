@@ -925,6 +925,9 @@ const deleteWalmartUSProducts = async (req: Request, res: Response) => {
 const postWalmartASN = async (req: Request, res: Response) => {
   try {
     const data = req.body.data.selection as WalmartOrder[];
+    const socketID = req.body.data.socketID.toString();
+    const io = req.app.get("io");
+
     const date = new Date(req.body.data.date);
     const newDate = format(date, "yyyy-MM-dd");
     const newTime = format(date, "HH:mm");
@@ -1131,6 +1134,7 @@ const postWalmartASN = async (req: Request, res: Response) => {
 
     for (const asn of asnList) {
       const edi = await walmartTranslate856(asn);
+      io.to(socketID).emit("postWalmartASN", "Translate completed.");
       const poNumber = asn.detail.hierarchical_level_HL_loop[0].hierarchical_level_HL_loop[0].purchase_order_reference_PRF.purchase_order_number_01;
       const headers = {
         Authorization: tokens.api_token,
@@ -1142,10 +1146,11 @@ const postWalmartASN = async (req: Request, res: Response) => {
       };
 
       const response = await mftSendMessage(headers, edi);
+      io.to(socketID).emit("postWalmartASN", "Message sent.");
       responseList.push(response);
     }
 
-    res.status(200).send(asnList);
+    res.status(200).send(responseList);
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
@@ -1280,7 +1285,7 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
               service_promotion_allowance_or_charge_information_SAC: {
                 allowance_or_charge_indicator_01: "A",
                 service_promotion_allowance_or_charge_code_02: "I410",
-                amount_05: saleData.Invoices[0].AdditionalCharges[0].Total,
+                amount_05: saleData.Invoices[0].AdditionalCharges[0].Total * -1,
                 allowance_or_charge_method_of_handling_code_12: "02",
               },
             },
@@ -1288,7 +1293,7 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
               service_promotion_allowance_or_charge_information_SAC: {
                 allowance_or_charge_indicator_01: "A",
                 service_promotion_allowance_or_charge_code_02: "F910",
-                amount_05: saleData.Invoices[0].AdditionalCharges[1].Total,
+                amount_05: saleData.Invoices[0].AdditionalCharges[1].Total * -1,
                 allowance_or_charge_method_of_handling_code_12: "02",
               },
             },
@@ -1352,6 +1357,7 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
       };
 
       const edi = await walmartTranslate810(invoice, envelope);
+      io.to(socketID).emit("postWalmartInvoice", "Translate completed.");
       const poNumber = invoice.heading.beginning_segment_for_invoice_BIG.purchase_order_number_04;
       const headers = {
         Authorization: tokens.api_token,
@@ -1363,6 +1369,7 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
       };
 
       const response = await mftSendMessage(headers, edi);
+      io.to(socketID).emit("postWalmartInvoice", "Message sent.");
       responseList.push(response);
     }
 
