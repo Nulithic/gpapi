@@ -132,6 +132,34 @@ const getDearSaleOrderAPI = async (search: string, io: any, socketID: string) =>
     return {};
   }
 };
+const getDearSaleInvoiceAPI = async (search: string, io: any, socketID: string) => {
+  try {
+    const response = await axios.get(`https://inventory.dearsystems.com/ExternalApi/v2/saleList?Search=${search}`, {
+      headers: headers,
+    });
+
+    const total = response.data.Total;
+    const saleList = response.data.SaleList;
+    let filtered;
+
+    if (total > 1) {
+      const notVoided = saleList.filter((item: any) => item.Status !== "VOIDED");
+      filtered = notVoided[0];
+    } else filtered = saleList[0];
+
+    const resSaleInvoice = await axios.get(`https://inventory.dearsystems.com/ExternalApi/v2/sale/invoice?SaleID=${filtered.SaleID}`, {
+      headers: headers,
+    });
+
+    io.to(socketID).emit("getDearSaleInvoiceAPI", "Sale Invoice Found.");
+
+    return resSaleInvoice.data;
+  } catch (e) {
+    io.to(socketID).emit("getDearSaleInvoiceAPI", "Sale Invoice Not Found.");
+    console.log(`DEAR API getDearSaleInvoice error. - ${e}`);
+    return {};
+  }
+};
 
 const postDearSaleFulfilmentShipAPI = async (orderNumber: any, shipData: any, io: any, socketID: string) => {
   await axios
@@ -202,6 +230,7 @@ export {
   getDearLocationsAPI,
   getDearInventoryAPI,
   getDearSaleOrderAPI,
+  getDearSaleInvoiceAPI,
   postDearSaleFulfilmentShipAPI,
   postDearStockTransferAPI,
   postDearSaleOrderAPI,

@@ -3,7 +3,7 @@ import { format, parseISO } from "date-fns";
 import fs from "fs";
 import path from "path";
 
-import { walmartTranslate850, walmartMap850, walmartTranslate856, walmartTranslate997 } from "api/Stedi";
+import { walmartTranslate850, walmartMap850, walmartTranslate856, walmartTranslate997, walmartTranslate810 } from "api/Stedi";
 import { mftAuthorization, mftSendMessage } from "api/MFTGateway";
 import { scrapB2B, convertHTML } from "puppet/B2B";
 import { Customers } from "models";
@@ -19,6 +19,9 @@ import walmartCaseLabel from "templates/walmartCaseLabel";
 import walmartPalletLabel from "templates/walmartPalletLabel";
 import walmartMasterBOL from "templates/walmartMasterBOL";
 import walmartCG from "utilities/walmartCG";
+import { getDearSaleOrderAPI } from "api/DearSystems";
+import { WalmartInvoice, BaselineItemDataInvoiceIT1Loop } from "types/WalmartUS/stedi810";
+import { DearSaleOrder } from "types/WalmartUS/dearSaleOrder";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {
@@ -78,6 +81,8 @@ const getWalmartUSOrders = async (req: Request, res: Response) => {
 const postWalmartUSImportMFT = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postWalmartUSImportMFT");
+    const socketID = req.body.socketID.toString();
+    const io = req.app.get("io");
 
     // get edi
     const filePath = path.join(__dirname, "orders.txt");
@@ -86,7 +91,9 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
 
     // translate and map edi to json
     const translationData = await walmartTranslate850(dataEDI);
+    io.to(socketID).emit("postWalmartImportMFT", `Walmart 850 translate completed.`);
     const data = (await walmartMap850(translationData)) as WalmartOrder[];
+    io.to(socketID).emit("postWalmartImportMFT", `Walmart 850 mapping completed.`);
 
     // save to local db
     const ak2List = [];
@@ -198,6 +205,7 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
 
     // translate 997 json to edi
     const edi997 = await walmartTranslate997(input, envelope);
+    io.to(socketID).emit("postWalmartImportMFT", `Walmart 997 translate completed.`);
 
     // transmit 997 edi to partner
     const tokens = await mftAuthorization();
@@ -210,6 +218,7 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
       "Content-Type": "text/plain",
     };
     const response = await mftSendMessage(headers, edi997);
+    io.to(socketID).emit("postWalmartImportMFT", `Message sent successfully.`);
 
     res.status(200).send(response);
   } catch (err) {
@@ -1136,7 +1145,7 @@ const postWalmartASN = async (req: Request, res: Response) => {
       responseList.push(response);
     }
 
-    res.status(200).send(responseList);
+    res.status(200).send(asnList);
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
@@ -1145,7 +1154,219 @@ const postWalmartASN = async (req: Request, res: Response) => {
 const postWalmartInvoice = async (req: Request, res: Response) => {
   try {
     const data = req.body.data.selection as WalmartOrder[];
-    res.status(200).send();
+    const socketID = req.body.data.socketID.toString();
+    const io = req.app.get("io");
+
+    const date = new Date(req.body.data.date);
+    const newDate = format(date, "yyyy-MM-dd");
+    const newTime = format(date, "HH:mm");
+
+    const invoiceList = [];
+
+    for (const item of data) {
+      const saleData = (await getDearSaleOrderAPI(item.purchaseOrderNumber, io, socketID)) as DearSaleOrder;
+
+      const cityStateZip = `${item.buyingPartyCity} ${item.buyingPartyStateOrProvince} ${item.buyingPartyPostalCode} ${item.buyingPartyCountry}`;
+
+      const tds01 = saleData.Invoices[0].Total;
+      const tds02 = saleData.Invoices[0].Lines.reduce((a, b) => a + b.Total, 0);
+      const tds04 = tds02 * 0.01;
+      const tds03 = tds01 - tds04;
+
+      const dateISO = parseISO(saleData.Fulfilments[0].Ship.Lines[0].ShipmentDate.toString());
+      const shipDate = format(dateISO, "yyyy-MM-dd");
+
+      const lineItemList: BaselineItemDataInvoiceIT1Loop[] = [];
+      for (const line of saleData.Invoices[0].Lines) {
+        const walmartItem = await Customers.WalmartUSProducts.findOne({ sku: line.SKU });
+
+        const lineItem = {
+          baseline_item_data_invoice_IT1: {
+            quantity_invoiced_02: line.Quantity,
+            unit_or_basis_for_measurement_code_03: "EA",
+            unit_price_04: line.Price,
+            product_service_id_qualifier_06: "IN",
+            product_service_id_07: walmartItem.walmartItem,
+            product_service_id_qualifier_08: "UP",
+            product_service_id_09: line.ProductCustomField3,
+          },
+        };
+        lineItemList.push(lineItem);
+      }
+
+      const invoice: WalmartInvoice = {
+        heading: {
+          transaction_set_header_ST: {
+            transaction_set_identifier_code_01: "810",
+            transaction_set_control_number_02: 1,
+          },
+          beginning_segment_for_invoice_BIG: {
+            date_01: newDate,
+            invoice_number_02: saleData.Invoices[0].InvoiceNumber.match(/\d+/).join(""),
+            date_03: format(new Date(item.purchaseOrderDate), "yyyy-MM-dd"),
+            purchase_order_number_04: item.purchaseOrderNumber,
+          },
+          reference_information_REF: [
+            {
+              reference_identification_qualifier_01: "IA",
+              reference_identification_02: "546382721",
+            },
+            {
+              reference_identification_qualifier_01: "DP",
+              reference_identification_02: item.departmentNumber,
+            },
+          ],
+          party_identification_N1_loop: [
+            {
+              party_identification_N1: {
+                entity_identifier_code_01: "SU",
+                name_02: "Green Project",
+              },
+            },
+            {
+              party_identification_N1: {
+                entity_identifier_code_01: "ST",
+                name_02: item.buyingParty,
+                identification_code_qualifier_03: "UL",
+                identification_code_04: item.buyingPartyGLN,
+              },
+              party_location_N3: [
+                {
+                  address_information_01: item.buyingPartyStreet,
+                  address_information_02: cityStateZip,
+                },
+              ],
+              geographic_location_N4: {
+                city_name_01: item.buyingPartyCity,
+                state_or_province_code_02: item.buyingPartyStateOrProvince,
+                postal_code_03: item.buyingPartyPostalCode,
+                country_code_04: item.buyingPartyCountry,
+              },
+            },
+          ],
+          terms_of_sale_deferred_terms_of_sale_ITD: [
+            {
+              terms_type_code_01: "08",
+              terms_basis_date_code_02: "3",
+              terms_discount_percent_03: 1,
+              terms_discount_days_due_05: 50,
+              terms_net_days_07: 90,
+              terms_discount_amount_08: parseFloat(tds04.toFixed(2)),
+              description_12: "Net 90",
+            },
+          ],
+          date_time_reference_DTM: [
+            {
+              date_time_qualifier_01: "011",
+              date_02: shipDate,
+            },
+          ],
+          fob_related_instructions_FOB: {
+            shipment_method_of_payment_01: item.fobMethodOfPayment,
+          },
+        },
+        detail: {
+          baseline_item_data_invoice_IT1_loop: lineItemList,
+        },
+        summary: {
+          total_monetary_value_summary_TDS: {
+            amount_01: tds01,
+            amount_02: parseFloat(tds02.toFixed(2)),
+            amount_03: parseFloat(tds03.toFixed(2)),
+            amount_04: parseFloat(tds04.toFixed(2)),
+          },
+          service_promotion_allowance_or_charge_information_SAC_loop: [
+            {
+              service_promotion_allowance_or_charge_information_SAC: {
+                allowance_or_charge_indicator_01: "A",
+                service_promotion_allowance_or_charge_code_02: "I410",
+                amount_05: saleData.Invoices[0].AdditionalCharges[0].Total,
+                allowance_or_charge_method_of_handling_code_12: "02",
+              },
+            },
+            {
+              service_promotion_allowance_or_charge_information_SAC: {
+                allowance_or_charge_indicator_01: "A",
+                service_promotion_allowance_or_charge_code_02: "F910",
+                amount_05: saleData.Invoices[0].AdditionalCharges[1].Total,
+                allowance_or_charge_method_of_handling_code_12: "02",
+              },
+            },
+          ],
+          transaction_totals_CTT: {
+            number_of_line_items_01: item.transactionTotalsCTTLoop[0].transactionTotalsCTT.numberOfLineItems01,
+          },
+        },
+      };
+
+      invoiceList.push(invoice);
+    }
+
+    const tokens = await mftAuthorization();
+
+    const responseList = [];
+
+    for (const invoice of invoiceList) {
+      const control = await walmartCG();
+      const order = await Customers.WalmartUSOrders.findOne({
+        purchaseOrderNumber: invoice.heading.beginning_segment_for_invoice_BIG.purchase_order_number_04,
+      });
+
+      const envelope = {
+        interchangeHeader: {
+          authorizationInformationQualifier: order.interchangeHeader.authorizationInformationQualifier,
+          authorizationInformation: order.interchangeHeader.authorizationInformation,
+          securityQualifier: order.interchangeHeader.securityQualifier,
+          securityInformation: order.interchangeHeader.securityInformation,
+          senderQualifier: order.interchangeHeader.senderQualifier,
+          senderId: order.interchangeHeader.senderId,
+          receiverQualifier: order.interchangeHeader.receiverQualifier,
+          receiverId: order.interchangeHeader.receiverId,
+          date: order.interchangeHeader.date,
+          time: order.interchangeHeader.time,
+          repetitionSeparator: order.interchangeHeader.repetitionSeparator,
+          controlVersionNumber: order.interchangeHeader.controlVersionNumber,
+          controlNumber: control.serialNumber.toString(),
+          acknowledgementRequestedCode: order.interchangeHeader.acknowledgementRequestedCode,
+          usageIndicatorCode: order.interchangeHeader.usageIndicatorCode,
+          componentSeparator: order.interchangeHeader.componentSeparator,
+        },
+        groupHeader: {
+          functionalIdentifierCode: order.groupHeader.functionalIdentifierCode,
+          applicationSenderCode: order.groupHeader.applicationSenderCode,
+          applicationReceiverCode: order.groupHeader.applicationReceiverCode,
+          date: order.groupHeader.date,
+          time: order.groupHeader.time,
+          controlNumber: control.serialNumber.toString(),
+          agencyCode: order.groupHeader.agencyCode,
+          release: order.groupHeader.release,
+        },
+        groupTrailer: {
+          numberOfTransactions: "1",
+          controlNumber: control.serialNumber.toString(),
+        },
+        interchangeTrailer: {
+          numberOfFunctionalGroups: "1",
+          controlNumber: control.serialNumber.toString(),
+        },
+      };
+
+      const edi = await walmartTranslate810(invoice, envelope);
+      const poNumber = invoice.heading.beginning_segment_for_invoice_BIG.purchase_order_number_04;
+      const headers = {
+        Authorization: tokens.api_token,
+        "AS2-From": "GreenProjectWalmartUS",
+        "AS2-To": "08925485US00",
+        Subject: "Walmart Invoice - Green Project",
+        "Attachment-Name": `${poNumber}-invoice.txt`,
+        "Content-Type": "text/plain",
+      };
+
+      const response = await mftSendMessage(headers, edi);
+      responseList.push(response);
+    }
+
+    res.status(200).send(responseList);
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
