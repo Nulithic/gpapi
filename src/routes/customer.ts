@@ -68,6 +68,7 @@ const customerRoutes = (app: Express) => {
 
   app.post("/api/post/customer/walmart_us/asn", [verifyToken], WalmartUS.postWalmartASN);
   app.post("/api/post/customer/walmart_us/invoice", [verifyToken], WalmartUS.postWalmartInvoice);
+  app.post("/api/post/customer/walmart_us/sync", [verifyToken], WalmartUS.postWalmartSync);
 
   //HSN
   app.post("/api/post/customer/hsn/import", [verifyToken], HSN.postHSNImport);

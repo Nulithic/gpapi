@@ -1,5 +1,7 @@
 import axios from "axios";
-import { Product, ProductList, LocationList, Inventory } from "types/dearTypes";
+import { ProductList, Product } from "types/Dear/dearProduct";
+import { LocationList } from "types/Dear/dearLocation";
+import { Inventory } from "types/Dear/dearInventory";
 
 const headers = {
   "api-auth-accountid": process.env.API_ID,

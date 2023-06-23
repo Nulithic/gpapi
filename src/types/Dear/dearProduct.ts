@@ -84,28 +84,3 @@ export interface Product {
   CartonQuantity: number;
   CartonInnerQuantity: number;
 }
-
-export interface LocationList {
-  ID: string;
-  Name: string;
-  Bins: Bin[];
-}
-export interface Bin {
-  ID: string;
-  Name: string;
-}
-
-export interface Inventory {
-  ID: string;
-  SKU: string;
-  Name: string;
-  Barcode: string;
-  Location: string;
-  Bin: string;
-  OnHand: number;
-  Allocated: number;
-  Available: number;
-  OnOrder: number;
-  StockOnHand: number;
-  InTransit: number;
-}

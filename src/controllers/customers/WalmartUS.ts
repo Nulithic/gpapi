@@ -19,9 +19,9 @@ import walmartCaseLabel from "templates/walmartCaseLabel";
 import walmartPalletLabel from "templates/walmartPalletLabel";
 import walmartMasterBOL from "templates/walmartMasterBOL";
 import walmartCG from "utilities/walmartCG";
-import { getDearSaleOrderAPI } from "api/DearSystems";
+import { getDearSaleOrderAPI, postDearSaleOrderAPI } from "api/DearSystems";
 import { WalmartInvoice, BaselineItemDataInvoiceIT1Loop } from "types/WalmartUS/stedi810";
-import { DearSaleOrder } from "types/WalmartUS/dearSaleOrder";
+import { DearSaleOrder } from "types/Dear/dearSaleOrder";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {
@@ -1419,6 +1419,30 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
   }
 };
 
+const postWalmartSync = async (req: Request, res: Response) => {
+  try {
+    const data = req.body.data.selection as WalmartOrder[];
+    const socketID = req.body.data.socketID.toString();
+    const io = req.app.get("io");
+
+    const dearList = [];
+
+    for (const order of data) {
+      const poNumber = order.purchaseOrderNumber;
+      const lineItems = order.baselineItemDataPO1Loop;
+
+      const dearData = await getDearSaleOrderAPI(poNumber, io, socketID);
+
+      dearList.push(dearData);
+    }
+
+    res.status(200).send(dearList);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+};
+
 export default {
   getWalmartUSOrders,
   postWalmartUSImportMFT,
@@ -1447,4 +1471,5 @@ export default {
   deleteWalmartUSProducts,
   postWalmartASN,
   postWalmartInvoice,
+  postWalmartSync,
 };
