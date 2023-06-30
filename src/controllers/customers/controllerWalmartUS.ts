@@ -502,13 +502,10 @@ export const getWalmartMasterBOL = async (req: Request, res: Response) => {
     userAction(req.body.user, `${fileName} - getWalmartMasterBOL`);
     let selectionForMasterBOL = req.body.data as WalmartOrder[];
 
-    walmartMasterBOL(selectionForMasterBOL);
+    const blob = walmartMasterBOL(selectionForMasterBOL);
 
-    const directoryPath = path.dirname(require.main.filename) + "/resources/temp/";
-    const pdfStream = fs.createReadStream(directoryPath + "asdf.pdf");
     res.setHeader("Content-Type", "application/pdf");
-    pdfStream.pipe(res);
-    pdfStream.on("end", () => console.log(`Walmart Master BOL CREATED - ${new Date().toLocaleString()}`));
+    res.status(200).send(blob);
   } catch (err) {
     console.log(err);
     res.status(500).send(err);

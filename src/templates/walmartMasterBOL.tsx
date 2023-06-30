@@ -988,11 +988,8 @@ const walmartMasterBOL = (selection: WalmartOrder[]) => {
     doc.text("Customer Order Information:", 306, 67, { align: "center" });
     doc.line(210, 69, 402, 69);
   }
-  const pdfData = doc.output();
-  const directoryPath = path.dirname(require.main.filename) + "/resources/temp/";
-  fs.writeFileSync(directoryPath + "asdf.pdf", pdfData, "binary");
 
-  return;
+  return doc.output();
 };
 
 export default walmartMasterBOL;
