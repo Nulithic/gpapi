@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
-const WalmartUSLabelCodes = mongoose.model(
-  "WalmartUSLabelCodes",
+const WalmartShippingLabelUS = mongoose.model(
+  "WalmartShippingLabelUS",
   new mongoose.Schema(
     {
       purchaseOrderNumber: String,
@@ -23,7 +23,7 @@ const WalmartUSLabelCodes = mongoose.model(
     },
     { versionKey: false }
   ).index({ serialNumber: 1 }, { unique: true }),
-  "WalmartUSLabelCodes"
+  "WalmartShippingLabelUS"
 );
 
-export default WalmartUSLabelCodes;
+export default WalmartShippingLabelUS;

@@ -1,7 +1,6 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { WalmartUS } from "controllers/customers";
 
 const routeWalmartCA = (app: Express) => {
   app.use((_, res, next) => {
@@ -11,10 +10,10 @@ const routeWalmartCA = (app: Express) => {
     next();
   });
 
-  app.get("/api/get/customer/walmart_us/orders", [verifyToken], WalmartUS.getWalmartUSOrders);
+  // app.get("/api/get/customer/walmart_us/orders", [verifyToken], WalmartUS.getWalmartUSOrders);
 
-  app.post("/api/post/customer/walmart_us/import/mft", [verifyToken], WalmartUS.postWalmartUSImportMFT);
-  app.post("/api/post/customer/walmart_us/import/edi", [verifyToken], WalmartUS.postWalmartUSImportEDI);
+  // app.post("/api/post/customer/walmart_us/import/mft", [verifyToken], WalmartUS.postWalmartUSImportMFT);
+  // app.post("/api/post/customer/walmart_us/import/edi", [verifyToken], WalmartUS.postWalmartUSImportEDI);
   // app.post("/api/post/customer/walmart_us/import/tracker", [verifyToken], WalmartUS.postWalmartUSImportTracker);
   // app.post("/api/post/customer/walmart_us/import/location", [verifyToken], WalmartUS.postWalmartUSImportLocation);
   // app.post("/api/post/customer/walmart_us/order/archive", [verifyToken], WalmartUS.postWalmartUSArchiveOrder);

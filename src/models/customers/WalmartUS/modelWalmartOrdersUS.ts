@@ -182,8 +182,8 @@ const TransactionTotalsCTTLoop = new mongoose.Schema(
 
 const TransactionSetTrailerSE = new mongoose.Schema({ numberOfIncludedSegments01: Number, transactionSetControlNumber02: Number }, { _id: false });
 
-const WalmartUSOrders = mongoose.model(
-  "WalmartUSOrders",
+const WalmartOrdersUS = mongoose.model(
+  "WalmartOrdersUS",
   new mongoose.Schema(
     {
       interchangeHeader: InterchangeHeader,
@@ -250,7 +250,7 @@ const WalmartUSOrders = mongoose.model(
     },
     { versionKey: false }
   ),
-  "WalmartUSOrders"
+  "WalmartOrdersUS"
 );
 
-export default WalmartUSOrders;
+export default WalmartOrdersUS;

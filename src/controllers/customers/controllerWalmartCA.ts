@@ -22,7 +22,7 @@ import walmartCG from "utilities/walmartCG";
 import { getDearSaleOrderAPI, postDearSaleOrderAPI } from "api/DearSystems";
 import { WalmartInvoice, BaselineItemDataInvoiceIT1Loop } from "types/WalmartUS/stedi810";
 import { DearSaleOrder } from "types/Dear/dearSaleOrder";
-import WalmartOrdersCA from "models/Customers/WalmartCA/modelWalmartOrdersCA";
+import WalmartOrdersCA from "models/customers/WalmartCA/modelWalmartOrdersCA";
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {

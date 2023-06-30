@@ -9,7 +9,7 @@ import cors from "cors";
 
 import adminRoutes from "routes/admin";
 import authRoutes from "routes/auth";
-import customerRoutes from "routes/customer";
+import customerRoutes from "routes/customers";
 import warehouseRoutes from "routes/warehouse";
 import dearRoutes from "routes/dear";
 import logRoutes from "routes/log";

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
-const WalmartUSProducts = mongoose.model(
-  "WalmartUSProducts",
+const WalmartProductsUS = mongoose.model(
+  "WalmartProductsUS",
   new mongoose.Schema(
     {
       walmartItem: String,
@@ -19,7 +19,7 @@ const WalmartUSProducts = mongoose.model(
     },
     { versionKey: false }
   ),
-  "WalmartUSProducts"
+  "WalmartProductsUS"
 );
 
-export default WalmartUSProducts;
+export default WalmartProductsUS;

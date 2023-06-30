@@ -4,7 +4,7 @@ import { Customers } from "models";
 import { userAction } from "utilities/userAction";
 import { HSNOrder } from "types/hsnTypes";
 import { postDearSaleOrderAPI, postDearSaleOrderLinesAPI } from "api/DearSystems";
-import HSNPriceList from "models/Customers/HSNPriceList";
+import HSNPriceList from "models/customers/HSNPriceList";
 import sleep from "utilities/sleep";
 
 const postHSNImport = async (req: Request, res: Response) => {

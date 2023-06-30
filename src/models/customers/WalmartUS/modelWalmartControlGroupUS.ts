@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
-const WalmartUSControlGroup = mongoose.model(
-  "WalmartUSControlGroup",
+const WalmartControlGroupUS = mongoose.model(
+  "WalmartControlGroupUS",
   new mongoose.Schema(
     {
       serialNumber: Number,
@@ -9,7 +9,7 @@ const WalmartUSControlGroup = mongoose.model(
     },
     { versionKey: false }
   ).index({ serialNumber: 1 }, { unique: true }),
-  "WalmartUSControlGroup"
+  "WalmartControlGroupUS"
 );
 
-export default WalmartUSControlGroup;
+export default WalmartControlGroupUS;

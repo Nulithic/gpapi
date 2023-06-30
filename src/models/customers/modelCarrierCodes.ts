@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const CarrierCodes = mongoose.model(
-  "WalmartCarrierCodes",
+  "CarrierCodes",
   new mongoose.Schema(
     {
       scac: String,
@@ -9,7 +9,7 @@ const CarrierCodes = mongoose.model(
     },
     { versionKey: false }
   ),
-  "WalmartCarrierCodes"
+  "CarrierCodes"
 );
 
 export default CarrierCodes;
