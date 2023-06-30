@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { HSN } from "controllers/customers";
+import { postHSNImport } from "controllers/customers/controllerHSN";
 
 const routeHSN = (app: Express) => {
   app.use((req, res, next) => {
@@ -12,7 +12,7 @@ const routeHSN = (app: Express) => {
   });
 
   //HSN
-  app.post("/api/post/customer/hsn/import", [verifyToken], HSN.postHSNImport);
+  app.post("/api/post/customer/hsn/import", [verifyToken], postHSNImport);
 };
 
 export default routeHSN;

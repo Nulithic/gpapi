@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { MicroCenter } from "controllers/customers";
+import { getMicroCenterOrders } from "controllers/customers/controllerMicroCenter";
 
 const routeMicroCenter = (app: Express) => {
   app.use((req, res, next) => {
@@ -12,7 +12,7 @@ const routeMicroCenter = (app: Express) => {
   });
 
   //Micro Center
-  app.get("/api/get/customer/micro_center/orders", [verifyToken], MicroCenter.getMicroCenterOrders);
+  app.get("/api/get/customer/micro_center/orders", [verifyToken], getMicroCenterOrders);
   // app.post("/api/post/customer/micro_center/create/order", [verifyToken], customerControllers.postMicroCenterOrder);
 };
 

@@ -14,7 +14,7 @@ const parseXml = async (xmlString: string) => {
   );
 };
 
-const getMicroCenterOrders = async (req: Request, res: Response) => {
+export const getMicroCenterOrders = async (req: Request, res: Response) => {
   const spsToken = "Bearer " + req.query.spsToken;
   const pathName = req.query.pathName;
 
@@ -31,5 +31,3 @@ const getMicroCenterOrders = async (req: Request, res: Response) => {
     res.status(500).send({ message: err });
   }
 };
-
-export default { getMicroCenterOrders };

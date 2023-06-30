@@ -1,13 +1,12 @@
 import { Request, Response } from "express";
 import { format, parseISO } from "date-fns";
-import { Customers } from "models";
 import { userAction } from "utilities/userAction";
 import { HSNOrder } from "types/hsnTypes";
 import { postDearSaleOrderAPI, postDearSaleOrderLinesAPI } from "api/DearSystems";
-import HSNPriceList from "models/customers/HSNPriceList";
+import { HSNPriceList } from "models/customers/HSN";
 import sleep from "utilities/sleep";
 
-const postHSNImport = async (req: Request, res: Response) => {
+export const postHSNImport = async (req: Request, res: Response) => {
   try {
     const data = req.body.importData as HSNOrder[];
 
@@ -118,5 +117,3 @@ const postHSNImport = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-
-export default { postHSNImport };
