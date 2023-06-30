@@ -49,30 +49,7 @@ const getWalmartUSOrders = async (req: Request, res: Response) => {
         break;
     }
 
-    const carrierResponse = await Customers.WalmartCarrierCodes.find();
-
-    const getCarrierName = (order: any) => {
-      const name = carrierResponse.find((carrier) => carrier.scac === order.carrierSCAC);
-      if (!name) return "";
-      return name.company;
-    };
-
-    const locationResponse = await Customers.WalmartUSLocations.find();
-    const getDistributionCenterName = (order: any) => {
-      const dc = locationResponse.filter(
-        (location) => location.addressType === "2 GENERAL DC MERCHANDISE" && location.storeNumber === order.distributionCenterNumber
-      );
-      if (dc.length === 0) return "";
-      return dc[0].addressLine1;
-    };
-
-    const newList = orderList.map((order) => ({
-      ...order.toObject(),
-      carrierName: getCarrierName(order),
-      distributionCenterName: getDistributionCenterName(order),
-    }));
-
-    res.status(200).send(newList);
+    res.status(200).send(orderList);
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -98,6 +75,11 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
     // save to local db
     const ak2List = [];
     for (const item of data) {
+      const locationResponse = await Customers.WalmartUSLocations.find({ gln: item.buyingPartyGLN });
+      const locationFilter = locationResponse.find((item) => item.addressType == "2 GENERAL DC MERCHANDISE" || item.addressType == "1 REGULAR DC MERCHANDISE");
+
+      const location = locationFilter ?? locationResponse[0];
+
       await Customers.WalmartUSOrders.updateOne(
         { purchaseOrderNumber: item.purchaseOrderNumber },
         {
@@ -105,8 +87,11 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
           actualWeight: "",
           billOfLading: "",
           carrierSCAC: "",
+          carrierName: "",
           carrierReference: "",
           carrierClass: "",
+          distributionCenterName: location.addressLine1,
+          distributionCenterNumber: location.storeNumber,
           nmfc: "",
           floorOrPallet: "",
           height: "",
@@ -228,12 +213,21 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
 const postWalmartUSImportEDI = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postWalmartImportEDI");
+    const socketID = req.body.socketID.toString();
+    const io = req.app.get("io");
 
     const dataEDI = req.body.dataEDI;
     const translationData = await walmartTranslate850(dataEDI);
+    io.to(socketID).emit("postWalmartUSImportEDI", `Walmart 850 translate completed.`);
     const data = await walmartMap850(translationData);
+    io.to(socketID).emit("postWalmartUSImportEDI", `Walmart 850 mapping completed.`);
 
     for (const item of data) {
+      const locationResponse = await Customers.WalmartUSLocations.find({ gln: item.buyingPartyGLN });
+      const locationFilter = locationResponse.find((item) => item.addressType == "2 GENERAL DC MERCHANDISE" || item.addressType == "1 REGULAR DC MERCHANDISE");
+
+      const location = locationFilter ?? locationResponse[0];
+
       await Customers.WalmartUSOrders.updateOne(
         { purchaseOrderNumber: item.purchaseOrderNumber },
         {
@@ -241,8 +235,11 @@ const postWalmartUSImportEDI = async (req: Request, res: Response) => {
           actualWeight: "",
           billOfLading: "",
           carrierSCAC: "",
+          carrierName: "",
           carrierReference: "",
           carrierClass: "",
+          distributionCenterName: location.addressLine1,
+          distributionCenterNumber: location.storeNumber,
           nmfc: "",
           floorOrPallet: "",
           height: "",
@@ -369,11 +366,14 @@ const postWalmartUSImportTracker = async (req: Request, res: Response) => {
       const purchaseOrderDate = format(new Date(Date.UTC(0, 0, item["PO Date"])), "MM/dd/yyyy");
       const shipDateScheduled = format(new Date(Date.UTC(0, 0, item["Ship Date Scheduled"])), "MM/dd/yyyy");
 
+      const carrierResponse = await Customers.WalmartCarrierCodes.findOne({ scac: item["Carrier SCAC"] });
+
       const tracker = {
         purchaseOrderNumber: item.PO.toString(),
         actualWeight: item["Actual Weight"].toString(),
         billOfLading: item.BOL.toString(),
         carrierSCAC: item["Carrier SCAC"],
+        carrierName: carrierResponse.company ?? "",
         carrierReference: item["Carrier Reference"].toString(),
         carrierClass: item.Class.toString(),
         nmfc: item.NMFC,
