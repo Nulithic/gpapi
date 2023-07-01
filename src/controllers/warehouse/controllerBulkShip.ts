@@ -5,7 +5,7 @@ import { getDearSaleOrderAPI, postDearSaleFulfilmentShipAPI } from "api/DearSyst
 import { userAction } from "utilities/userAction";
 import sleep from "utilities/sleep";
 
-const getBulkShipTemplate = (req: Request, res: Response) => {
+export const getBulkShipTemplate = (req: Request, res: Response) => {
   userAction(req.body.user, "getBulkShipTemplate");
   const directoryPath = path.dirname(require.main.filename) + "/resources/downloads/";
   res.download(directoryPath + "BulkShipTemplate.xlsx", "BulkShipTemplate.xlsx", (err) => {
@@ -13,7 +13,7 @@ const getBulkShipTemplate = (req: Request, res: Response) => {
   });
 };
 
-const postBulkShip = async (req: Request, res: Response) => {
+export const postBulkShip = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postBulkShip");
 
@@ -57,9 +57,3 @@ const postBulkShip = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-
-const BulkShip = {
-  getBulkShipTemplate,
-  postBulkShip,
-};
-export default BulkShip;

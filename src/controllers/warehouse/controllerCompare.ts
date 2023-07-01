@@ -6,7 +6,7 @@ import { userAction } from "utilities/userAction";
 import sleep from "utilities/sleep";
 import { Dear } from "models";
 
-const getCompareTemplate = (req: Request, res: Response) => {
+export const getCompareTemplate = (req: Request, res: Response) => {
   userAction(req.body.user, "getCompareTemplate");
   const directoryPath = path.dirname(require.main.filename) + "/resources/downloads/";
   res.download(directoryPath + "CompareTemplate.xlsx", "CompareTemplate.xlsx", (err) => {
@@ -14,7 +14,7 @@ const getCompareTemplate = (req: Request, res: Response) => {
   });
 };
 
-const postCompare = async (req: Request, res: Response) => {
+export const postCompare = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postCompare");
 
@@ -60,9 +60,3 @@ const postCompare = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-
-const Compare = {
-  getCompareTemplate,
-  postCompare,
-};
-export default Compare;

@@ -5,7 +5,7 @@ import { postDearStockTransferAPI } from "api/DearSystems";
 import { userAction } from "utilities/userAction";
 import sleep from "utilities/sleep";
 
-const getTransferTemplate = (req: Request, res: Response) => {
+export const getTransferTemplate = (req: Request, res: Response) => {
   userAction(req.body.user, "getTransferTemplate");
   const directoryPath = path.dirname(require.main.filename) + "/resources/downloads/";
   res.download(directoryPath + "TransferTemplate.xlsx", "TransferTemplate.xlsx", (err) => {
@@ -13,7 +13,7 @@ const getTransferTemplate = (req: Request, res: Response) => {
   });
 };
 
-const postTransfer = async (req: Request, res: Response) => {
+export const postTransfer = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, "postTransfer");
 
@@ -47,9 +47,3 @@ const postTransfer = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-
-const Transfer = {
-  getTransferTemplate,
-  postTransfer,
-};
-export default Transfer;

@@ -1,7 +1,9 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { BulkShip, Compare, Transfer } from "controllers/warehouse";
+import { getBulkShipTemplate, postBulkShip } from "controllers/warehouse/controllerBulkShip";
+import { getCompareTemplate, postCompare } from "controllers/warehouse/controllerCompare";
+import { getTransferTemplate, postTransfer } from "controllers/warehouse/controllerTransfer";
 
 const warehouseRoutes = (app: Express) => {
   app.use((req, res, next) => {
@@ -18,14 +20,14 @@ const warehouseRoutes = (app: Express) => {
   // app.post("/api/post/warehouse/inventory_count/delete/count", [verifyToken], warehouseControllers.deleteInventoryCount);
   // app.post("/api/post/warehouse/inventory_count/delete/item_count", [verifyToken], warehouseControllers.deleteItemCount);
 
-  app.get("/api/get/warehouse/bulk_ship/template", [verifyToken], BulkShip.getBulkShipTemplate);
-  app.post("/api/post/warehouse/bulk_ship", [verifyToken], BulkShip.postBulkShip);
+  app.get("/api/get/warehouse/bulk_ship/template", [verifyToken], getBulkShipTemplate);
+  app.post("/api/post/warehouse/bulk_ship", [verifyToken], postBulkShip);
 
-  app.get("/api/get/warehouse/compare/template", [verifyToken], Compare.getCompareTemplate);
-  app.post("/api/post/warehouse/compare", [verifyToken], Compare.postCompare);
+  app.get("/api/get/warehouse/compare/template", [verifyToken], getCompareTemplate);
+  app.post("/api/post/warehouse/compare", [verifyToken], postCompare);
 
-  app.get("/api/get/warehouse/transfer/template", [verifyToken], Transfer.getTransferTemplate);
-  app.post("/api/post/warehouse/transfer", [verifyToken], Transfer.postTransfer);
+  app.get("/api/get/warehouse/transfer/template", [verifyToken], getTransferTemplate);
+  app.post("/api/post/warehouse/transfer", [verifyToken], postTransfer);
 };
 
 export default warehouseRoutes;
