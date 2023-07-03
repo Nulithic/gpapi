@@ -4,7 +4,7 @@ import path from "path";
 import { getDearSaleOrderAPI, postDearSaleFulfilmentShipAPI } from "api/DearSystems";
 import { userAction } from "utilities/userAction";
 import sleep from "utilities/sleep";
-import { Dear } from "models";
+import { DearInventory, DearProducts } from "models/Dear";
 
 export const getCompareTemplate = (req: Request, res: Response) => {
   userAction(req.body.user, "getCompareTemplate");
@@ -21,8 +21,8 @@ export const postCompare = async (req: Request, res: Response) => {
     const importData = req.body.importData;
     const site = req.body.location;
 
-    const products = await Dear.DearProducts.find();
-    const inventory = await Dear.DearInventory.find();
+    const products = await DearProducts.find();
+    const inventory = await DearInventory.find();
 
     const list = [];
     for (let data of importData) {

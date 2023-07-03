@@ -1,7 +1,4 @@
-import DearLogs from "./DearLogs";
-import UserLogs from "./UserLogs";
+import DearLogs from "./modelDearLogs";
+import UserLogs from "./modelUserLogs";
 
-export default {
-  DearLogs,
-  UserLogs,
-};
+export { DearLogs, UserLogs };

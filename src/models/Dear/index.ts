@@ -1,11 +1,6 @@
-import DearSaleList from "./DearSaleList";
-import DearLocations from "./DearLocations";
-import DearProducts from "./DearProducts";
-import DearInventory from "./DearInventory";
+import DearSaleList from "./modelDearSaleList";
+import DearLocations from "./modelDearLocations";
+import DearProducts from "./modelDearProducts";
+import DearInventory from "./modelDearInventory";
 
-export default {
-  DearSaleList,
-  DearLocations,
-  DearProducts,
-  DearInventory,
-};
+export { DearSaleList, DearLocations, DearProducts, DearInventory };

@@ -8,7 +8,7 @@ import routeWalgreens from "./routeWalgreens";
 import routeWalmartCA from "./routeWalmartCA";
 import routeWalmartUS from "./routeWalmartUS";
 
-const customerRoutes = (app: Express) => {
+const routeCustomers = (app: Express) => {
   routeHSN(app);
   routeInkTech(app);
   routeLovetoner(app);
@@ -18,4 +18,4 @@ const customerRoutes = (app: Express) => {
   routeWalmartCA(app);
 };
 
-export default customerRoutes;
+export default routeCustomers;

@@ -1,7 +1,7 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import log from "controllers/log";
+import { getLogs } from "controllers/controllerLog";
 
 const logRoutes = (app: Express) => {
   app.use((req, res, next) => {
@@ -11,7 +11,7 @@ const logRoutes = (app: Express) => {
   });
 
   //GET
-  app.get("/api/get/logs", [verifyToken], log.getLogs);
+  app.get("/api/get/logs", [verifyToken], getLogs);
 };
 
 export default logRoutes;

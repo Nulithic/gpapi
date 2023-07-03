@@ -1,9 +1,9 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import auth from "controllers/auth";
+import { getUser, setStateCookie, userLogin, userLogout } from "controllers/controllerAuth";
 
-const authRoutes = (app: Express) => {
+const routeAuth = (app: Express) => {
   app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", process.env.ACCESS_CONTROL_ALLOW_ORIGIN);
     res.header("Access-Control-Allow-Credentials", "true");
@@ -12,12 +12,12 @@ const authRoutes = (app: Express) => {
   });
 
   //GET
-  app.get("/api/get/user", [verifyToken], auth.getUser);
-  app.get("/api/get/set_state_cookie", auth.setStateCookie);
+  app.get("/api/get/user", [verifyToken], getUser);
+  app.get("/api/get/set_state_cookie", setStateCookie);
 
   //POST
-  app.post("/api/post/user/login", auth.userLogin);
-  app.post("/api/post/user/logout", [verifyToken], auth.userLogout);
+  app.post("/api/post/user/login", userLogin);
+  app.post("/api/post/user/logout", [verifyToken], userLogout);
 };
 
-export default authRoutes;
+export default routeAuth;

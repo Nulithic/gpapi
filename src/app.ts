@@ -7,12 +7,12 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 
-import adminRoutes from "routes/admin";
-import authRoutes from "routes/auth";
-import customerRoutes from "routes/customers";
-import warehouseRoutes from "routes/routesWarehouse";
-import dearRoutes from "routes/dear";
-import logRoutes from "routes/log";
+import routeAdmin from "routes/routeAdmin";
+import routeAuth from "routes/routeAuth";
+import routeCustomers from "routes/customers";
+import routeWarehouse from "routes/routesWarehouse";
+import routeDear from "routes/routeDear";
+import routeLog from "routes/routeLog";
 
 const app = express();
 const port = process.env.PORT;
@@ -31,12 +31,12 @@ const io = new Server(server, {
 
 app.set("io", io);
 
-adminRoutes(app);
-authRoutes(app);
-customerRoutes(app);
-warehouseRoutes(app);
-dearRoutes(app);
-logRoutes(app);
+routeAdmin(app);
+routeAuth(app);
+routeCustomers(app);
+routeWarehouse(app);
+routeDear(app);
+routeLog(app);
 
 io.on("connection", (socket) => {
   const count = io.engine.clientsCount;
