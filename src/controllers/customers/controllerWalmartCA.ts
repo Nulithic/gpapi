@@ -3,32 +3,70 @@ import { format, parseISO } from "date-fns";
 import fs from "fs";
 import path from "path";
 
-import { walmartTranslate850, walmartMap850, walmartTranslate856, walmartTranslate997, walmartTranslate810 } from "api/Stedi";
-import { mftAuthorization, mftSendMessage } from "api/MFTGateway";
 import { scrapB2B, convertHTML } from "puppet/B2B";
-import { Customers } from "models";
-import { WalmartAdvanceShipNotice } from "types/WalmartUS/stedi856";
-import { WalmartOrder, WalmartTrackerFile, WalmartLabel } from "types/WalmartUS/walmartTypes";
+
 import { userAction } from "utilities/userAction";
-import walmartSSCC from "utilities/walmartSSCC";
 
 import walmartPackingSlip from "templates/walmartPackingSlip";
 import walmartUnderlyingBOL from "templates/walmartUnderlyingBOL";
-
 import walmartCaseLabel from "templates/walmartCaseLabel";
 import walmartPalletLabel from "templates/walmartPalletLabel";
 import walmartMasterBOL from "templates/walmartMasterBOL";
-import walmartCG from "utilities/walmartCG";
+
+import { walmartTranslate850, walmartMap850, walmartTranslate856, walmartTranslate997, walmartTranslate810 } from "api/Stedi";
+import { mftAuthorization, mftSendMessage } from "api/MFTGateway";
 import { getDearSaleOrderAPI, postDearSaleOrderAPI } from "api/DearSystems";
+
+import { WalmartAdvanceShipNotice } from "types/WalmartUS/stedi856";
+import { WalmartOrder, WalmartTrackerFile, WalmartLabel } from "types/WalmartUS/walmartTypes";
 import { WalmartInvoice, BaselineItemDataInvoiceIT1Loop } from "types/WalmartUS/stedi810";
+
 import { DearSaleOrder } from "types/Dear/dearSaleOrder";
-import WalmartOrdersCA from "models/customers/WalmartCA/modelWalmartOrdersCA";
+
+import { WalmartControlGroupCA, WalmartLocationsCA, WalmartOrdersCA, WalmartProductsCA, WalmartShippingLabelCA } from "models/customers/WalmartCA";
+import CarrierCodes from "models/customers/modelCarrierCodes";
+
+const fileName = path.basename(__filename);
 
 const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
   array.reduce((acc, value, index, array) => {
     (acc[predicate(value, index, array)] ||= []).push(value);
     return acc;
   }, {} as { [key: string]: T[] });
+
+const walmartSSCC = async () => {
+  const lastRecord = await WalmartShippingLabelCA.findOne().sort("-serialNumber");
+  const newSerialCode = lastRecord ? lastRecord.serialNumber + 1 : 0;
+  const serialNumber = newSerialCode.toString().padStart(7, "0");
+
+  const ssccData = "0" + "081995202" + serialNumber;
+
+  let sum = 0;
+  for (let i = 0; i < ssccData.length; i++) {
+    const digit = parseInt(ssccData[i]);
+    const weight = i % 2 == 0 ? 3 : 1;
+    sum += digit * weight;
+  }
+  const checkDigit = (10 - (sum % 10)) % 10;
+
+  const sscc = "00" + ssccData + checkDigit;
+
+  return { sscc: sscc, serialNumber: serialNumber };
+};
+
+const walmartCG = async () => {
+  try {
+    const control = await WalmartControlGroupCA.findOne();
+    const newSerialCode = control ? control.serialNumber + 1 : 1;
+    const controlGroup = newSerialCode.toString().padStart(8, "0");
+
+    await WalmartControlGroupCA.findOneAndUpdate({}, { serialNumber: newSerialCode, controlGroup: controlGroup }, { upsert: true });
+
+    return { serialNumber: newSerialCode, controlGroup: controlGroup };
+  } catch (err) {
+    console.log(err);
+  }
+};
 
 export const getWalmartOrdersCA = async (req: Request, res: Response) => {
   try {
@@ -50,7 +88,7 @@ export const getWalmartOrdersCA = async (req: Request, res: Response) => {
         break;
     }
 
-    const carrierResponse = await Customers.WalmartCarrierCodes.find();
+    const carrierResponse = await CarrierCodes.find();
 
     const getCarrierName = (order: any) => {
       const name = carrierResponse.find((carrier) => carrier.scac === order.carrierSCAC);
@@ -58,7 +96,7 @@ export const getWalmartOrdersCA = async (req: Request, res: Response) => {
       return name.company;
     };
 
-    const locationResponse = await Customers.WalmartUSLocations.find();
+    const locationResponse = await WalmartLocationsCA.find();
     const getDistributionCenterName = (order: any) => {
       const dc = locationResponse.filter(
         (location) => location.addressType === "2 GENERAL DC MERCHANDISE" && location.storeNumber === order.distributionCenterNumber
@@ -79,9 +117,9 @@ export const getWalmartOrdersCA = async (req: Request, res: Response) => {
   }
 };
 
-const postWalmartUSImportMFT = async (req: Request, res: Response) => {
+export const importWalmartOrdersMFT = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "postWalmartUSImportMFT");
+    userAction(req.body.user, `${fileName} - importWalmartOrdersMFT`);
     const socketID = req.body.socketID.toString();
     const io = req.app.get("io");
 
@@ -92,22 +130,30 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
 
     // translate and map edi to json
     const translationData = await walmartTranslate850(dataEDI);
-    io.to(socketID).emit("postWalmartImportMFT", `Walmart 850 translate completed.`);
+    io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 850 translate completed.`);
     const data = (await walmartMap850(translationData)) as WalmartOrder[];
-    io.to(socketID).emit("postWalmartImportMFT", `Walmart 850 mapping completed.`);
+    io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 850 mapping completed.`);
 
     // save to local db
     const ak2List = [];
     for (const item of data) {
-      await Customers.WalmartUSOrders.updateOne(
+      const locationResponse = await WalmartLocationsCA.find({ gln: item.buyingPartyGLN });
+      const locationFilter = locationResponse.find((item) => item.addressType == "2 GENERAL DC MERCHANDISE" || item.addressType == "1 REGULAR DC MERCHANDISE");
+
+      const location = locationFilter ?? locationResponse[0];
+
+      await WalmartOrdersCA.updateOne(
         { purchaseOrderNumber: item.purchaseOrderNumber },
         {
           ...item,
           actualWeight: "",
           billOfLading: "",
           carrierSCAC: "",
+          carrierName: "",
           carrierReference: "",
           carrierClass: "",
+          distributionCenterName: location.addressLine1,
+          distributionCenterNumber: location.storeNumber,
           nmfc: "",
           floorOrPallet: "",
           height: "",
@@ -206,7 +252,7 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
 
     // translate 997 json to edi
     const edi997 = await walmartTranslate997(input, envelope);
-    io.to(socketID).emit("postWalmartImportMFT", `Walmart 997 translate completed.`);
+    io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 997 translate completed.`);
 
     // transmit 997 edi to partner
     const tokens = await mftAuthorization();
@@ -219,31 +265,43 @@ const postWalmartUSImportMFT = async (req: Request, res: Response) => {
       "Content-Type": "text/plain",
     };
     const response = await mftSendMessage(headers, edi997);
-    io.to(socketID).emit("postWalmartImportMFT", response.message);
+    io.to(socketID).emit("importWalmartOrdersMFT", response.message);
 
     res.status(200).send(response);
   } catch (err) {
     res.status(500).send(err);
   }
 };
-const postWalmartUSImportEDI = async (req: Request, res: Response) => {
+export const importWalmartOrdersEDI = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "postWalmartImportEDI");
+    userAction(req.body.user, `${fileName} - importWalmartOrdersEDI`);
+    const socketID = req.body.socketID.toString();
+    const io = req.app.get("io");
 
     const dataEDI = req.body.dataEDI;
     const translationData = await walmartTranslate850(dataEDI);
+    io.to(socketID).emit("importWalmartOrdersEDI", `Walmart 850 translate completed.`);
     const data = await walmartMap850(translationData);
+    io.to(socketID).emit("importWalmartOrdersEDI", `Walmart 850 mapping completed.`);
 
     for (const item of data) {
-      await Customers.WalmartUSOrders.updateOne(
+      const locationResponse = await WalmartLocationsCA.find({ gln: item.buyingPartyGLN });
+      const locationFilter = locationResponse.find((item) => item.addressType == "2 GENERAL DC MERCHANDISE" || item.addressType == "1 REGULAR DC MERCHANDISE");
+
+      const location = locationFilter ?? locationResponse[0];
+
+      await WalmartOrdersCA.updateOne(
         { purchaseOrderNumber: item.purchaseOrderNumber },
         {
           ...item,
           actualWeight: "",
           billOfLading: "",
           carrierSCAC: "",
+          carrierName: "",
           carrierReference: "",
           carrierClass: "",
+          distributionCenterName: location.addressLine1,
+          distributionCenterNumber: location.storeNumber,
           nmfc: "",
           floorOrPallet: "",
           height: "",
@@ -269,9 +327,9 @@ const postWalmartUSImportEDI = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const postWalmartUSImportB2B = async (req: Request, res: Response) => {
+export const importWalmartOrdersB2B = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "postWalmartImportB2B");
+    userAction(req.body.user, `${fileName} - importWalmartOrdersB2B`);
 
     const dataB2B = req.body.dataB2B;
     const socketID = req.body.socketID.toString();
@@ -284,14 +342,14 @@ const postWalmartUSImportB2B = async (req: Request, res: Response) => {
     const data = await scrapB2B(day, monthYear, io, socketID);
     // get POS list
     const POS = data.filter((item) => new URLSearchParams(item).get("dt") === "POS");
-    io.to(socketID).emit("postWalmartImportB2B", `Total POS found: ${POS.length}`);
+    io.to(socketID).emit("importWalmartOrdersB2B", `Total POS found: ${POS.length}`);
 
     // convert HTML to text
     let posList = [];
     for (let i = 0; i < POS.length; i++) {
       const text = await convertHTML(POS[i]);
       posList.push(text);
-      io.to(socketID).emit("postWalmartImportB2B", `Conversion ${i + 1} completed.`);
+      io.to(socketID).emit("importWalmartOrdersB2B", `Conversion ${i + 1} completed.`);
     }
 
     // group EDIs by control number
@@ -321,7 +379,7 @@ const postWalmartUSImportB2B = async (req: Request, res: Response) => {
 
     // save JSON to database
     for (const item of translationList.flat()) {
-      await Customers.WalmartUSOrders.updateOne(
+      await WalmartOrdersCA.updateOne(
         { purchaseOrderNumber: item.purchaseOrderNumber },
         {
           ...item,
@@ -350,7 +408,7 @@ const postWalmartUSImportB2B = async (req: Request, res: Response) => {
       );
     }
 
-    io.to(socketID).emit("postWalmartImportB2B", "Import completed.");
+    io.to(socketID).emit("importWalmartOrdersB2B", "Import completed.");
 
     res.status(200).send(translationList);
   } catch (err) {
@@ -358,9 +416,9 @@ const postWalmartUSImportB2B = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const postWalmartUSImportTracker = async (req: Request, res: Response) => {
+export const importWalmartTracker = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "postWalmartImportTracker");
+    userAction(req.body.user, `${fileName} - importWalmartTracker`);
     const dataTracker = req.body.dataTracker as WalmartTrackerFile[];
 
     let trackerList = [];
@@ -370,11 +428,14 @@ const postWalmartUSImportTracker = async (req: Request, res: Response) => {
       const purchaseOrderDate = format(new Date(Date.UTC(0, 0, item["PO Date"])), "MM/dd/yyyy");
       const shipDateScheduled = format(new Date(Date.UTC(0, 0, item["Ship Date Scheduled"])), "MM/dd/yyyy");
 
+      const carrierResponse = await CarrierCodes.findOne({ scac: item["Carrier SCAC"] });
+
       const tracker = {
         purchaseOrderNumber: item.PO.toString(),
         actualWeight: item["Actual Weight"].toString(),
         billOfLading: item.BOL.toString(),
         carrierSCAC: item["Carrier SCAC"],
+        carrierName: carrierResponse.company ?? "",
         carrierReference: item["Carrier Reference"].toString(),
         carrierClass: item.Class.toString(),
         nmfc: item.NMFC,
@@ -394,7 +455,7 @@ const postWalmartUSImportTracker = async (req: Request, res: Response) => {
         shipDateScheduled: shipDateScheduled,
       };
       trackerList.push(tracker);
-      await Customers.WalmartUSOrders.updateOne({ purchaseOrderNumber: item.PO }, tracker, { upsert: true });
+      await WalmartOrdersCA.updateOne({ purchaseOrderNumber: item.PO }, tracker, { upsert: true });
     }
 
     res.status(200).send(trackerList);
@@ -403,12 +464,12 @@ const postWalmartUSImportTracker = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const postWalmartUSImportLocation = (req: Request, res: Response) => {};
-const postWalmartUSArchiveOrder = async (req: Request, res: Response) => {
+export const importWalmartLocation = (req: Request, res: Response) => {};
+export const archiveWalmartOrder = async (req: Request, res: Response) => {
   const list = req.body.data as WalmartOrder[];
   try {
     for (const item of list) {
-      await Customers.WalmartUSOrders.findOneAndUpdate({ purchaseOrderNumber: item.purchaseOrderNumber }, { archived: "Yes" });
+      await WalmartOrdersCA.findOneAndUpdate({ purchaseOrderNumber: item.purchaseOrderNumber }, { archived: "Yes" });
     }
     res.status(200).send("Archive Completed.");
   } catch (err) {
@@ -417,12 +478,12 @@ const postWalmartUSArchiveOrder = async (req: Request, res: Response) => {
   }
 };
 
-const getWalmartUSPackingSlip = async (req: Request, res: Response) => {
+export const getWalmartPackingSlip = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "getWalmartUSPackingSlip");
+    userAction(req.body.user, `${fileName} - getWalmartPackingSlip`);
     let selectionForPacking = req.body.data as WalmartOrder[];
 
-    const caseSizes = await Customers.WalmartUSProducts.find();
+    const caseSizes = await WalmartProductsCA.find();
 
     for (let order of selectionForPacking) {
       for (let item of order.baselineItemDataPO1Loop) {
@@ -446,9 +507,9 @@ const getWalmartUSPackingSlip = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const getWalmartUSUnderlyingBOL = async (req: Request, res: Response) => {
+export const getWalmartUnderlyingBOL = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "getWalmartUSUnderlyingBOL");
+    userAction(req.body.user, `${fileName} - getWalmartUnderlyingBOL`);
     let selectionForUnderlyingBOL = req.body.data as WalmartOrder[];
 
     const pdfStream = await walmartUnderlyingBOL(selectionForUnderlyingBOL);
@@ -460,25 +521,22 @@ const getWalmartUSUnderlyingBOL = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const getWalmartUSMasterBOL = async (req: Request, res: Response) => {
+export const getWalmartMasterBOL = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "getWalmartUSMasterBOL");
+    userAction(req.body.user, `${fileName} - getWalmartMasterBOL`);
     let selectionForMasterBOL = req.body.data as WalmartOrder[];
 
-    walmartMasterBOL(selectionForMasterBOL);
+    const blob = walmartMasterBOL(selectionForMasterBOL);
 
-    const directoryPath = path.dirname(require.main.filename) + "/resources/temp/";
-    const pdfStream = fs.createReadStream(directoryPath + "asdf.pdf");
     res.setHeader("Content-Type", "application/pdf");
-    pdfStream.pipe(res);
-    pdfStream.on("end", () => console.log(`Walmart Master BOL CREATED - ${new Date().toLocaleString()}`));
+    res.status(200).send(blob);
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
   }
 };
 
-const checkWalmartUSCaseLabel = async (req: Request, res: Response) => {
+export const checkWalmartCaseLabel = async (req: Request, res: Response) => {
   try {
     const data = req.body.data as WalmartOrder[];
 
@@ -486,7 +544,7 @@ const checkWalmartUSCaseLabel = async (req: Request, res: Response) => {
     const getUniqueValues = (array: string[]) => [...new Set(array)];
     const unqiueOrders = getUniqueValues(orders);
 
-    const existingList = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: { $in: unqiueOrders }, type: "Case" });
+    const existingList = await WalmartShippingLabelCA.find({ purchaseOrderNumber: { $in: unqiueOrders }, type: "Case" });
 
     res.status(200).send(existingList);
   } catch (err) {
@@ -494,12 +552,12 @@ const checkWalmartUSCaseLabel = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
+export const getWalmartCaseLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "getWalmartUSCaseLabel");
+    userAction(req.body.user, `${fileName} - getWalmartCaseLabel`);
     const selectionForCases = req.body.data as WalmartOrder[];
 
-    const caseSizes = await Customers.WalmartUSProducts.find();
+    const caseSizes = await WalmartProductsCA.find();
 
     const caseLabelList = [];
 
@@ -532,7 +590,7 @@ const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
             date: new Date().toLocaleString(),
           };
 
-          await Customers.WalmartUSLabelCodes.create(caseLabel);
+          await WalmartShippingLabelCA.create(caseLabel);
 
           caseLabelList.push(caseLabel);
         }
@@ -548,9 +606,9 @@ const getWalmartUSCaseLabel = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const getExistingWalmartUSCaseLabel = async (req: Request, res: Response) => {
+export const getExistingWalmartCaseLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "getExistingWalmartUSCaseLabel");
+    userAction(req.body.user, `${fileName} - getExistingWalmartCaseLabel`);
     const existingList = req.body.data as WalmartLabel[];
     const pdfStream = await walmartCaseLabel(existingList);
     res.setHeader("Content-Type", "application/pdf");
@@ -561,16 +619,16 @@ const getExistingWalmartUSCaseLabel = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const getNewWalmartUSCaseLabel = async (req: Request, res: Response) => {
+export const getNewWalmartCaseLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "getNewWalmartUSCaseLabel");
+    userAction(req.body.user, `${fileName} - getNewWalmartCaseLabel`);
     const existingList = req.body.data.caseLabels as WalmartLabel[];
     const selectionForCases = req.body.data.selection as WalmartOrder[];
 
     const orderList = existingList.map((item) => item.purchaseOrderNumber);
-    await Customers.WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: { $in: orderList }, type: "Case" });
+    await WalmartShippingLabelCA.deleteMany({ purchaseOrderNumber: { $in: orderList }, type: "Case" });
 
-    const caseSizes = await Customers.WalmartUSProducts.find();
+    const caseSizes = await WalmartProductsCA.find();
     const caseLabelList = [];
     for (const selection of selectionForCases) {
       for (const item of selection.baselineItemDataPO1Loop) {
@@ -601,7 +659,7 @@ const getNewWalmartUSCaseLabel = async (req: Request, res: Response) => {
             date: new Date().toLocaleString(),
           };
 
-          await Customers.WalmartUSLabelCodes.create(caseLabel);
+          await WalmartShippingLabelCA.create(caseLabel);
 
           caseLabelList.push(caseLabel);
         }
@@ -618,7 +676,7 @@ const getNewWalmartUSCaseLabel = async (req: Request, res: Response) => {
   }
 };
 
-const checkWalmartUSPalletLabel = async (req: Request, res: Response) => {
+export const checkWalmartPalletLabel = async (req: Request, res: Response) => {
   try {
     const data = req.body.data as WalmartOrder[];
 
@@ -626,7 +684,7 @@ const checkWalmartUSPalletLabel = async (req: Request, res: Response) => {
     const getUniqueValues = (array: string[]) => [...new Set(array)];
     const unqiueOrders = getUniqueValues(orders);
 
-    const existingList = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: { $in: unqiueOrders }, type: "Pallet" });
+    const existingList = await WalmartShippingLabelCA.find({ purchaseOrderNumber: { $in: unqiueOrders }, type: "Pallet" });
 
     res.status(200).send(existingList);
   } catch (err) {
@@ -634,12 +692,12 @@ const checkWalmartUSPalletLabel = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const getWalmartUSPalletLabel = async (req: Request, res: Response) => {
+export const getWalmartPalletLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "getWalmartUSPalletLabel");
+    userAction(req.body.user, `${fileName} - getWalmartPalletLabel`);
     const selectionForPallets = req.body.data as WalmartOrder[];
 
-    const caseSizes = await Customers.WalmartUSProducts.find();
+    const caseSizes = await WalmartProductsCA.find();
     const palletLabelList = [];
 
     for (const selection of selectionForPallets) {
@@ -676,11 +734,11 @@ const getWalmartUSPalletLabel = async (req: Request, res: Response) => {
         date: new Date().toLocaleString(),
       };
 
-      await Customers.WalmartUSLabelCodes.create(palletLabel);
+      await WalmartShippingLabelCA.create(palletLabel);
 
       palletLabelList.push(palletLabel);
 
-      await Customers.WalmartUSOrders.findOneAndUpdate({ purchaseOrderNumber: selection.purchaseOrderNumber }, { hasPalletLabel: "Yes" });
+      await WalmartOrdersCA.findOneAndUpdate({ purchaseOrderNumber: selection.purchaseOrderNumber }, { hasPalletLabel: "Yes" });
     }
 
     const pdfStream = await walmartPalletLabel(palletLabelList);
@@ -692,9 +750,9 @@ const getWalmartUSPalletLabel = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const getExistingWalmartUSPalletLabel = async (req: Request, res: Response) => {
+export const getExistingWalmartPalletLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "getExistingWalmartUSPalletLabel");
+    userAction(req.body.user, `${fileName} - getExistingWalmartPalletLabel`);
 
     const existingList = req.body.data as WalmartLabel[];
 
@@ -707,16 +765,16 @@ const getExistingWalmartUSPalletLabel = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const getNewWalmartUSPalletLabel = async (req: Request, res: Response) => {
+export const getNewWalmartPalletLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "getNewWalmartUSPalletLabel");
+    userAction(req.body.user, `${fileName} - getNewWalmartPalletLabel`);
     const existingList = req.body.data.palletLabels as WalmartLabel[];
     const selectionForPallets = req.body.data.selection as WalmartOrder[];
 
     const orderList = existingList.map((item) => item.purchaseOrderNumber);
-    await Customers.WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: { $in: orderList }, type: "Pallet" });
+    await WalmartShippingLabelCA.deleteMany({ purchaseOrderNumber: { $in: orderList }, type: "Pallet" });
 
-    const caseSizes = await Customers.WalmartUSProducts.find();
+    const caseSizes = await WalmartProductsCA.find();
     const palletLabelList = [];
 
     for (const selection of selectionForPallets) {
@@ -752,7 +810,7 @@ const getNewWalmartUSPalletLabel = async (req: Request, res: Response) => {
         date: new Date().toLocaleString(),
       };
 
-      await Customers.WalmartUSLabelCodes.create(palletLabel);
+      await WalmartShippingLabelCA.create(palletLabel);
 
       palletLabelList.push(palletLabel);
     }
@@ -767,14 +825,14 @@ const getNewWalmartUSPalletLabel = async (req: Request, res: Response) => {
   }
 };
 
-const checkWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
+export const checkWalmartMultiPalletLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "checkWalmartUSMultiPalletLabel");
+    userAction(req.body.user, `${fileName} - checkWalmartMultiPalletLabel`);
     const data = req.body;
 
     const linesItems = [];
     for (const item of data.Order.Lines) {
-      const product = await Customers.WalmartUSProducts.findOne({ sku: item.SKU });
+      const product = await WalmartProductsCA.findOne({ sku: item.SKU });
       linesItems.push({ sku: item.SKU, upc: item.Walmart, qty: item.Quantity, caseCount: item.Quantity / parseInt(product.caseSize) });
     }
     const order = {
@@ -783,7 +841,7 @@ const checkWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
     };
 
     const totalCases = order.lineItems.reduce((previous, current) => previous + current.caseCount, 0);
-    const caseLabels = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data.CustomerReference, type: "Case" });
+    const caseLabels = await WalmartShippingLabelCA.find({ purchaseOrderNumber: data.CustomerReference, type: "Case" });
     const ssccList = caseLabels.map((item) => item.sscc);
 
     if (totalCases !== caseLabels.length) {
@@ -793,9 +851,9 @@ const checkWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
       return res.status(400).send("Total cases do not match with case labels.");
     }
 
-    await Customers.WalmartUSLabelCodes.deleteMany({ purchaseOrderNumber: data.CustomerReference, type: "Pallet", multiPallet: "No" });
+    await WalmartShippingLabelCA.deleteMany({ purchaseOrderNumber: data.CustomerReference, type: "Pallet", multiPallet: "No" });
 
-    const multiPallet = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data.CustomerReference, type: "Pallet", multiPallet: "Yes" });
+    const multiPallet = await WalmartShippingLabelCA.find({ purchaseOrderNumber: data.CustomerReference, type: "Pallet", multiPallet: "Yes" });
     if (multiPallet.length > 0) {
       console.log("A multi pallet already exists for this order.");
       return res.status(400).send("A multi pallet already exists for this order.");
@@ -807,21 +865,21 @@ const checkWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
     return res.status(500).send(err);
   }
 };
-const submitWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
+export const submitWalmartMultiPalletLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "submitWalmartUSMultiPalletLabel");
+    userAction(req.body.user, `${fileName} - submitWalmartMultiPalletLabel`);
     const pallets = req.body.pallets as Array<Array<String>>;
 
-    const orderData = await Customers.WalmartUSLabelCodes.findOne({ sscc: pallets[0][0] });
+    const orderData = await WalmartShippingLabelCA.findOne({ sscc: pallets[0][0] });
 
     for (let i = 0; i < pallets.length; i++) {
       let itemList: string[] = [];
 
       for (let k = 0; k < pallets[i].length; k++) {
-        const item = await Customers.WalmartUSLabelCodes.findOne({ sscc: pallets[i][k] }, { wmit: 1 });
+        const item = await WalmartShippingLabelCA.findOne({ sscc: pallets[i][k] }, { wmit: 1 });
         itemList.push(item.wmit);
 
-        await Customers.WalmartUSLabelCodes.findOneAndUpdate({ sscc: pallets[i][k] }, { $set: { multiPallet: "Yes", multiPalletID: i } });
+        await WalmartShippingLabelCA.findOneAndUpdate({ sscc: pallets[i][k] }, { $set: { multiPallet: "Yes", multiPalletID: i } });
       }
 
       const checkWalmartItem = itemList.every((item) => item === itemList[0]);
@@ -846,9 +904,9 @@ const submitWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
         date: new Date().toLocaleString(),
       };
 
-      await Customers.WalmartUSLabelCodes.create(palletLabel);
+      await WalmartShippingLabelCA.create(palletLabel);
 
-      await Customers.WalmartUSOrders.findOneAndUpdate({ purchaseOrderNumber: orderData.purchaseOrderNumber }, { hasPalletLabel: "Yes" });
+      await WalmartOrdersCA.findOneAndUpdate({ purchaseOrderNumber: orderData.purchaseOrderNumber }, { hasPalletLabel: "Yes" });
     }
 
     return res.status(200).send("Success");
@@ -857,9 +915,9 @@ const submitWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
     return res.status(500).send(err);
   }
 };
-const downloadWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
+export const downloadWalmartMultiPalletLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "downloadWalmartUSMultiPalletLabel");
+    userAction(req.body.user, `${fileName} - downloadWalmartMultiPalletLabel`);
 
     const multiPalletList = req.body.data as WalmartLabel[];
 
@@ -872,14 +930,14 @@ const downloadWalmartUSMultiPalletLabel = async (req: Request, res: Response) =>
     res.status(500).send(err);
   }
 };
-const deleteWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
+export const deleteWalmartMultiPalletLabel = async (req: Request, res: Response) => {
   try {
-    userAction(req.body.user, "deleteWalmartUSMultiPalletLabel");
+    userAction(req.body.user, `${fileName} - deleteWalmartMultiPalletLabel`);
     const multiPalletList = req.body.data as WalmartLabel[];
     const idList = multiPalletList.map((item) => item._id);
 
-    await Customers.WalmartUSLabelCodes.deleteMany({ _id: { $in: idList } });
-    await Customers.WalmartUSLabelCodes.updateMany(
+    await WalmartShippingLabelCA.deleteMany({ _id: { $in: idList } });
+    await WalmartShippingLabelCA.updateMany(
       { purchaseOrderNumber: multiPalletList[0].purchaseOrderNumber, type: "Case" },
       { $set: { multiPallet: "No", multiPalletID: 0 } }
     );
@@ -891,31 +949,31 @@ const deleteWalmartUSMultiPalletLabel = async (req: Request, res: Response) => {
   }
 };
 
-const getWalmartUSProducts = async (req: Request, res: Response) => {
+export const getWalmartProducts = async (req: Request, res: Response) => {
   try {
-    const list = await Customers.WalmartUSProducts.find();
+    const list = await WalmartProductsCA.find();
     res.status(200).send(list);
   } catch (err) {
     res.status(500).send(err.message);
   }
 };
-const addWalmartUSProducts = async (req: Request, res: Response) => {
+export const addWalmartProducts = async (req: Request, res: Response) => {
   try {
     const data = req.body.data;
-    await Customers.WalmartUSProducts.updateOne({ walmartItem: data.walmartItem }, data, { upsert: true });
-    const list = await Customers.WalmartUSProducts.find();
+    await WalmartProductsCA.updateOne({ walmartItem: data.walmartItem }, data, { upsert: true });
+    const list = await WalmartProductsCA.find();
     res.status(200).send(list);
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
   }
 };
-const deleteWalmartUSProducts = async (req: Request, res: Response) => {
+export const deleteWalmartProducts = async (req: Request, res: Response) => {
   try {
     const data = req.body.data;
     const dataList = data.map((item: any) => item.walmartItem);
-    await Customers.WalmartUSProducts.deleteMany({ walmartItem: dataList });
-    const list = await Customers.WalmartUSProducts.find();
+    await WalmartProductsCA.deleteMany({ walmartItem: dataList });
+    const list = await WalmartProductsCA.find();
     res.status(200).send(list);
   } catch (err) {
     console.log(err);
@@ -923,7 +981,7 @@ const deleteWalmartUSProducts = async (req: Request, res: Response) => {
   }
 };
 
-const postWalmartASN = async (req: Request, res: Response) => {
+export const postWalmartASN = async (req: Request, res: Response) => {
   try {
     const data = req.body.data.selection as WalmartOrder[];
     const socketID = req.body.data.socketID.toString();
@@ -941,8 +999,8 @@ const postWalmartASN = async (req: Request, res: Response) => {
       const parsedPODate = new Date(data[i].purchaseOrderDate);
       const poDate = format(parsedPODate, "yyyy-MM-dd");
 
-      const palletInfo = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Pallet" });
-      const caseInfo = await Customers.WalmartUSLabelCodes.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Case" });
+      const palletInfo = await WalmartShippingLabelCA.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Pallet" });
+      const caseInfo = await WalmartShippingLabelCA.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Case" });
 
       let transactionTotal = 2;
 
@@ -955,7 +1013,7 @@ const postWalmartASN = async (req: Request, res: Response) => {
 
         for (const item of cases) {
           transactionTotal += 2;
-          const productInfo = await Customers.WalmartUSProducts.findOne({ walmartItem: item.wmit });
+          const productInfo = await WalmartProductsCA.findOne({ walmartItem: item.wmit });
           const caseItem = {
             marks_and_numbers_information_MAN: [
               {
@@ -1136,7 +1194,7 @@ const postWalmartASN = async (req: Request, res: Response) => {
     for (const asn of asnList) {
       const control = await walmartCG();
       const poNumber = asn.detail.hierarchical_level_HL_loop[0].hierarchical_level_HL_loop[0].purchase_order_reference_PRF.purchase_order_number_01;
-      const order = await Customers.WalmartUSOrders.findOne({ purchaseOrderNumber: poNumber });
+      const order = await WalmartOrdersCA.findOne({ purchaseOrderNumber: poNumber });
 
       const envelope = {
         interchangeHeader: {
@@ -1198,7 +1256,7 @@ const postWalmartASN = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-const postWalmartInvoice = async (req: Request, res: Response) => {
+export const postWalmartInvoice = async (req: Request, res: Response) => {
   try {
     const data = req.body.data.selection as WalmartOrder[];
     const socketID = req.body.data.socketID.toString();
@@ -1225,7 +1283,7 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
 
       const lineItemList: BaselineItemDataInvoiceIT1Loop[] = [];
       for (const line of saleData.Invoices[0].Lines) {
-        const walmartItem = await Customers.WalmartUSProducts.findOne({ sku: line.SKU });
+        const walmartItem = await WalmartProductsCA.findOne({ sku: line.SKU });
 
         const lineItem = {
           baseline_item_data_invoice_IT1: {
@@ -1356,7 +1414,7 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
     for (const invoice of invoiceList) {
       const control = await walmartCG();
       const poNumber = invoice.heading.beginning_segment_for_invoice_BIG.purchase_order_number_04;
-      const order = await Customers.WalmartUSOrders.findOne({ purchaseOrderNumber: poNumber });
+      const order = await WalmartOrdersCA.findOne({ purchaseOrderNumber: poNumber });
 
       const envelope = {
         interchangeHeader: {
@@ -1420,7 +1478,7 @@ const postWalmartInvoice = async (req: Request, res: Response) => {
   }
 };
 
-const postWalmartSync = async (req: Request, res: Response) => {
+export const postWalmartSync = async (req: Request, res: Response) => {
   try {
     const data = req.body.data.selection as WalmartOrder[];
     const socketID = req.body.data.socketID.toString();
