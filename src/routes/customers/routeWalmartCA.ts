@@ -71,9 +71,9 @@ const routeWalmartCA = (app: Express) => {
   // app.post("/api/post/customer/walmart_ca/products/add", [verifyToken], WalmartUS.addWalmartUSProducts);
   // app.post("/api/post/customer/walmart_ca/products/delete", [verifyToken], WalmartUS.deleteWalmartUSProducts);
 
-  // app.post("/api/post/customer/walmart_ca/asn", [verifyToken], WalmartUS.postWalmartASN);
-  // app.post("/api/post/customer/walmart_ca/invoice", [verifyToken], WalmartUS.postWalmartInvoice);
-  // app.post("/api/post/customer/walmart_ca/sync", [verifyToken], WalmartUS.postWalmartSync);
+  app.post("/api/post/customer/walmart_ca/asn", [verifyToken], postWalmartASN);
+  app.post("/api/post/customer/walmart_ca/invoice", [verifyToken], postWalmartInvoice);
+  app.post("/api/post/customer/walmart_ca/sync", [verifyToken], postWalmartSync);
 };
 
 export default routeWalmartCA;

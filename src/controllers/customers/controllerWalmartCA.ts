@@ -985,6 +985,11 @@ export const deleteWalmartProducts = async (req: Request, res: Response) => {
   }
 };
 
+// needs Weight, SCAC, BOL, Carrier Reference
+// /detail/hierarchical_level_HL_loop/0/carrier_details_quantity_and_weight_TD1/0/weight_07 | Weight
+// /detail/hierarchical_level_HL_loop/0/carrier_details_routing_sequence_transit_time_TD5/0/identification_code_03 | SCAC
+// /detail/hierarchical_level_HL_loop/0/reference_information_REF/0/reference_identification_02 | BOL
+// /detail/hierarchical_level_HL_loop/0/reference_information_REF/1/reference_identification_02 | Carrier Reference
 export const postWalmartASN = async (req: Request, res: Response) => {
   try {
     const data = req.body.data.selection as WalmartOrder[];
@@ -1242,7 +1247,7 @@ export const postWalmartASN = async (req: Request, res: Response) => {
       io.to(socketID).emit("postWalmartASN", `${poNumber} - Translate completed.`);
       const headers = {
         Authorization: tokens.api_token,
-        "AS2-From": "GreenProjectWalmartUS",
+        "AS2-From": "GreenProjectWalmartCA",
         "AS2-To": "08925485US00",
         Subject: "Walmart ASN - Green Project",
         "Attachment-Name": `${poNumber}-ASN.txt`,
