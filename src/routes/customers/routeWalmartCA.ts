@@ -1,7 +1,36 @@
 import { Express } from "express";
 
 import verifyToken from "auth/verifyToken";
-import { getWalmartOrdersCA } from "controllers/customers/controllerWalmartCA";
+import {
+  addWalmartProducts,
+  archiveWalmartOrder,
+  checkWalmartCaseLabel,
+  checkWalmartMultiPalletLabel,
+  checkWalmartPalletLabel,
+  deleteWalmartMultiPalletLabel,
+  deleteWalmartProducts,
+  downloadWalmartMultiPalletLabel,
+  getExistingWalmartCaseLabel,
+  getExistingWalmartPalletLabel,
+  getNewWalmartCaseLabel,
+  getNewWalmartPalletLabel,
+  getWalmartCaseLabel,
+  getWalmartMasterBOL,
+  getWalmartOrders,
+  getWalmartPackingSlip,
+  getWalmartPalletLabel,
+  getWalmartProducts,
+  getWalmartUnderlyingBOL,
+  importWalmartLocation,
+  importWalmartOrdersB2B,
+  importWalmartOrdersEDI,
+  importWalmartOrdersMFT,
+  importWalmartTracker,
+  postWalmartASN,
+  postWalmartInvoice,
+  postWalmartSync,
+  submitWalmartMultiPalletLabel,
+} from "controllers/customers/controllerWalmartCA";
 
 const routeWalmartCA = (app: Express) => {
   app.use((_, res, next) => {
@@ -11,27 +40,27 @@ const routeWalmartCA = (app: Express) => {
     next();
   });
 
-  app.get("/api/get/customer/walmart_ca/orders", [verifyToken], getWalmartOrdersCA);
+  app.get("/api/get/customer/walmart_ca/orders", [verifyToken], getWalmartOrders);
 
   // app.post("/api/post/customer/walmart_ca/import/mft", [verifyToken], WalmartUS.postWalmartUSImportMFT);
-  // app.post("/api/post/customer/walmart_ca/import/edi", [verifyToken], WalmartUS.postWalmartUSImportEDI);
+  app.post("/api/post/customer/walmart_ca/import/edi", [verifyToken], importWalmartOrdersEDI);
   // app.post("/api/post/customer/walmart_ca/import/tracker", [verifyToken], WalmartUS.postWalmartUSImportTracker);
   // app.post("/api/post/customer/walmart_ca/import/location", [verifyToken], WalmartUS.postWalmartUSImportLocation);
   // app.post("/api/post/customer/walmart_ca/order/archive", [verifyToken], WalmartUS.postWalmartUSArchiveOrder);
 
-  // app.post("/api/post/customer/walmart_ca/order/packing_slip", [verifyToken], WalmartUS.getWalmartUSPackingSlip);
+  app.post("/api/post/customer/walmart_ca/order/packing_slip", [verifyToken], getWalmartPackingSlip);
   // app.post("/api/post/customer/walmart_ca/order/underlying_bol", [verifyToken], WalmartUS.getWalmartUSUnderlyingBOL);
   // app.post("/api/post/customer/walmart_ca/order/master_bol", [verifyToken], WalmartUS.getWalmartUSMasterBOL);
 
-  // app.post("/api/post/customer/walmart_ca/order/case_label/check", [verifyToken], WalmartUS.checkWalmartUSCaseLabel);
-  // app.post("/api/post/customer/walmart_ca/order/case_label", [verifyToken], WalmartUS.getWalmartUSCaseLabel);
-  // app.post("/api/post/customer/walmart_ca/order/case_label/existing", [verifyToken], WalmartUS.getExistingWalmartUSCaseLabel);
-  // app.post("/api/post/customer/walmart_ca/order/case_label/new", [verifyToken], WalmartUS.getNewWalmartUSCaseLabel);
+  app.post("/api/post/customer/walmart_ca/order/case_label/check", [verifyToken], checkWalmartCaseLabel);
+  app.post("/api/post/customer/walmart_ca/order/case_label", [verifyToken], getWalmartCaseLabel);
+  app.post("/api/post/customer/walmart_ca/order/case_label/existing", [verifyToken], getExistingWalmartCaseLabel);
+  app.post("/api/post/customer/walmart_ca/order/case_label/new", [verifyToken], getNewWalmartCaseLabel);
 
-  // app.post("/api/post/customer/walmart_ca/order/pallet_label/check", [verifyToken], WalmartUS.checkWalmartUSPalletLabel);
-  // app.post("/api/post/customer/walmart_ca/order/pallet_label", [verifyToken], WalmartUS.getWalmartUSPalletLabel);
-  // app.post("/api/post/customer/walmart_ca/order/pallet_label/existing", [verifyToken], WalmartUS.getExistingWalmartUSPalletLabel);
-  // app.post("/api/post/customer/walmart_ca/order/pallet_label/new", [verifyToken], WalmartUS.getNewWalmartUSPalletLabel);
+  app.post("/api/post/customer/walmart_ca/order/pallet_label/check", [verifyToken], checkWalmartPalletLabel);
+  app.post("/api/post/customer/walmart_ca/order/pallet_label", [verifyToken], getWalmartPalletLabel);
+  app.post("/api/post/customer/walmart_ca/order/pallet_label/existing", [verifyToken], getExistingWalmartPalletLabel);
+  app.post("/api/post/customer/walmart_ca/order/pallet_label/new", [verifyToken], getNewWalmartPalletLabel);
 
   // app.post("/api/post/customer/walmart_ca/order/pallet_label/multi/check", [verifyToken], WalmartUS.checkWalmartUSMultiPalletLabel);
   // app.post("/api/post/customer/walmart_ca/order/pallet_label/multi/create", [verifyToken], WalmartUS.submitWalmartUSMultiPalletLabel);

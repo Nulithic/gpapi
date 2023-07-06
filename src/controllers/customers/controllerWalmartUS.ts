@@ -551,6 +551,9 @@ export const getWalmartCaseLabel = async (req: Request, res: Response) => {
 
           const caseLabel = {
             purchaseOrderNumber: selection.purchaseOrderNumber,
+            supplierParty: "Green Project Inc.",
+            supplierPartyStreet: "815 Echelon Ct.",
+            supplierPartyAddress: "City of Industry, CA 91744",
             buyingParty: selection.buyingParty,
             buyingPartyStreet: selection.buyingPartyStreet,
             buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,
@@ -620,6 +623,9 @@ export const getNewWalmartCaseLabel = async (req: Request, res: Response) => {
 
           const caseLabel = {
             purchaseOrderNumber: selection.purchaseOrderNumber,
+            supplierParty: "Green Project Inc.",
+            supplierPartyStreet: "815 Echelon Ct.",
+            supplierPartyAddress: "City of Industry, CA 91744",
             buyingParty: selection.buyingParty,
             buyingPartyStreet: selection.buyingPartyStreet,
             buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,
@@ -695,6 +701,9 @@ export const getWalmartPalletLabel = async (req: Request, res: Response) => {
 
       const palletLabel = {
         purchaseOrderNumber: selection.purchaseOrderNumber,
+        supplierParty: "Green Project Inc.",
+        supplierPartyStreet: "815 Echelon Ct.",
+        supplierPartyAddress: "City of Industry, CA 91744",
         buyingParty: selection.buyingParty,
         buyingPartyStreet: selection.buyingPartyStreet,
         buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,
@@ -771,6 +780,9 @@ export const getNewWalmartPalletLabel = async (req: Request, res: Response) => {
 
       const palletLabel = {
         purchaseOrderNumber: selection.purchaseOrderNumber,
+        supplierParty: "Green Project Inc.",
+        supplierPartyStreet: "815 Echelon Ct.",
+        supplierPartyAddress: "City of Industry, CA 91744",
         buyingParty: selection.buyingParty,
         buyingPartyStreet: selection.buyingPartyStreet,
         buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,

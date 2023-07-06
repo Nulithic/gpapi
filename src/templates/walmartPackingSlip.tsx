@@ -108,7 +108,7 @@ const WalmartPackingSlip = ({ data }: { data: WalmartOrder[] }) => {
           <View style={styles.topContainer}>
             <View style={styles.addressContainer}>
               <View style={styles.shipFrom}>
-                <Text style={styles.shipFromTtile}>Ship From:</Text>
+                <Text style={styles.shipFromTtile}>Supplier:</Text>
                 <Text style={styles.shipFromAddress}>Green Project Inc.</Text>
                 <Text style={styles.shipFromAddress}>815 Echelon Ct.</Text>
                 <Text style={styles.shipFromAddress}>City of Industry, CA 91744</Text>

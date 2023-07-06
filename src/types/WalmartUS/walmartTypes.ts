@@ -84,6 +84,9 @@ export interface SelectionWithLabels extends WalmartOrder {
 export interface WalmartLabel {
   _id?: string;
   purchaseOrderNumber?: string;
+  supplierParty?: string;
+  supplierPartyStreet?: string;
+  supplierPartyAddress?: string;
   buyingParty?: string;
   buyingPartyStreet?: string;
   buyingPartyAddress?: string;

@@ -68,7 +68,7 @@ const walmartCG = async () => {
   }
 };
 
-export const getWalmartOrdersCA = async (req: Request, res: Response) => {
+export const getWalmartOrders = async (req: Request, res: Response) => {
   try {
     const option = req.query.option;
     const response = await WalmartOrdersCA.find();
@@ -486,16 +486,18 @@ export const getWalmartPackingSlip = async (req: Request, res: Response) => {
     const caseSizes = await WalmartProductsCA.find();
 
     for (let order of selectionForPacking) {
+      let numberOfCartons = 0;
+
       for (let item of order.baselineItemDataPO1Loop) {
         const walmartItem = caseSizes.find((size) => size.walmartItem === item.baselineItemDataPO1.productServiceId07);
         if (!walmartItem) return res.status(500).send(`${item.baselineItemDataPO1.productServiceId07} not found.`);
 
         const qty = item.baselineItemDataPO1.quantity02;
-        const caseSize = parseInt(walmartItem.caseSize);
-        const numOfCases = qty / caseSize;
-
-        item.baselineItemDataPO1.numberOfCases = numOfCases;
+        item.baselineItemDataPO1.numberOfCases = qty;
+        numberOfCartons += qty;
       }
+
+      order.numberOfCartons = numberOfCartons.toString();
     }
 
     const pdfStream = await walmartPackingSlip(selectionForPacking);
@@ -566,15 +568,16 @@ export const getWalmartCaseLabel = async (req: Request, res: Response) => {
         const walmartItem = caseSizes.find((size) => size.walmartItem === item.baselineItemDataPO1.productServiceId07);
         if (!walmartItem) return res.status(500).send(`${item.baselineItemDataPO1.productServiceId07} not found.`);
 
-        const qty = item.baselineItemDataPO1.quantity02;
-        const caseSize = parseInt(walmartItem.caseSize);
-        const numOfCases = qty / caseSize;
+        const numOfCases = item.baselineItemDataPO1.quantity02;
 
         for (let x = 0; x < numOfCases; x++) {
           const ssccData = await walmartSSCC();
 
           const caseLabel = {
             purchaseOrderNumber: selection.purchaseOrderNumber,
+            supplierParty: "Canadian Alliance Terminals",
+            supplierPartyStreet: "600-4327 Salish Sea Way",
+            supplierPartyAddress: "Delta, BC V4G 1B6",
             buyingParty: selection.buyingParty,
             buyingPartyStreet: selection.buyingPartyStreet,
             buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,
@@ -635,15 +638,16 @@ export const getNewWalmartCaseLabel = async (req: Request, res: Response) => {
         const walmartItem = caseSizes.find((size) => size.walmartItem === item.baselineItemDataPO1.productServiceId07);
         if (!walmartItem) return res.status(500).send(`${item.baselineItemDataPO1.productServiceId07} not found.`);
 
-        const qty = item.baselineItemDataPO1.quantity02;
-        const caseSize = parseInt(walmartItem.caseSize);
-        const numOfCases = qty / caseSize;
+        const numOfCases = item.baselineItemDataPO1.quantity02;
 
         for (let x = 0; x < numOfCases; x++) {
           const ssccData = await walmartSSCC();
 
           const caseLabel = {
             purchaseOrderNumber: selection.purchaseOrderNumber,
+            supplierParty: "Canadian Alliance Terminals",
+            supplierPartyStreet: "600-4327 Salish Sea Way",
+            supplierPartyAddress: "Delta, BC V4G 1B6",
             buyingParty: selection.buyingParty,
             buyingPartyStreet: selection.buyingPartyStreet,
             buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,
@@ -709,16 +713,16 @@ export const getWalmartPalletLabel = async (req: Request, res: Response) => {
         const walmartItem = caseSizes.find((size) => size.walmartItem === item.baselineItemDataPO1.productServiceId07);
         if (!walmartItem) return res.status(500).send(`${item.baselineItemDataPO1.productServiceId07} not found.`);
 
-        const qty = item.baselineItemDataPO1.quantity02;
-        const caseSize = parseInt(walmartItem.caseSize);
-        const numOfCases = qty / caseSize;
-        caseAmount += numOfCases;
+        caseAmount += item.baselineItemDataPO1.quantity02;
       }
 
       const ssccData = await walmartSSCC();
 
       const palletLabel = {
         purchaseOrderNumber: selection.purchaseOrderNumber,
+        supplierParty: "Canadian Alliance Terminals",
+        supplierPartyStreet: "600-4327 Salish Sea Way",
+        supplierPartyAddress: "Delta, BC V4G 1B6",
         buyingParty: selection.buyingParty,
         buyingPartyStreet: selection.buyingPartyStreet,
         buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,
@@ -785,16 +789,16 @@ export const getNewWalmartPalletLabel = async (req: Request, res: Response) => {
         const walmartItem = caseSizes.find((size) => size.walmartItem === item.baselineItemDataPO1.productServiceId07);
         if (!walmartItem) return res.status(500).send(`${item.baselineItemDataPO1.productServiceId07} not found.`);
 
-        const qty = item.baselineItemDataPO1.quantity02;
-        const caseSize = parseInt(walmartItem.caseSize);
-        const numOfCases = qty / caseSize;
-        caseAmount += numOfCases;
+        caseAmount += item.baselineItemDataPO1.quantity02;
       }
 
       const ssccData = await walmartSSCC();
 
       const palletLabel = {
         purchaseOrderNumber: selection.purchaseOrderNumber,
+        supplierParty: "Canadian Alliance Terminals",
+        supplierPartyStreet: "600-4327 Salish Sea Way",
+        supplierPartyAddress: "Delta, BC V4G 1B6",
         buyingParty: selection.buyingParty,
         buyingPartyStreet: selection.buyingPartyStreet,
         buyingPartyAddress: `${selection.buyingPartyCity}, ${selection.buyingPartyStateOrProvince} ${selection.buyingPartyPostalCode}`,

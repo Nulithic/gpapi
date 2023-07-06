@@ -88,9 +88,9 @@ const WalmartCaseLabel = ({ data }: { data: WalmartLabel[] }) => (
             <View style={styles.addressContainer}>
               <View style={styles.shipFrom}>
                 <Text style={styles.shipFromTtile}>Ship From:</Text>
-                <Text style={styles.shipFromAddress}>Green Project Inc.</Text>
-                <Text style={styles.shipFromAddress}>815 Echelon Ct.</Text>
-                <Text style={styles.shipFromAddress}>City of Industry, CA 91744</Text>
+                <Text style={styles.shipFromAddress}>{item.supplierParty}</Text>
+                <Text style={styles.shipFromAddress}>{item.supplierPartyStreet}</Text>
+                <Text style={styles.shipFromAddress}>{item.supplierPartyAddress}</Text>
               </View>
               <View style={styles.shipTo}>
                 <Text style={styles.shipToTtile}>Ship To:</Text>

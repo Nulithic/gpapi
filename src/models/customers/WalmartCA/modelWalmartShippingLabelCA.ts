@@ -5,6 +5,9 @@ const WalmartShippingLabelCA = mongoose.model(
   new mongoose.Schema(
     {
       purchaseOrderNumber: String,
+      supplierParty: String,
+      supplierPartyStreet: String,
+      supplierPartyAddress: String,
       buyingParty: String,
       buyingPartyStreet: String,
       buyingPartyAddress: String,
