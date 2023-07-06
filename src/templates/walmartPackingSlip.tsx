@@ -1,6 +1,6 @@
 import React from "react";
 import { Page, Text, View, Document, StyleSheet, Image, renderToStream } from "@react-pdf/renderer";
-import { WalmartOrder } from "types/WalmartUS/walmartTypes";
+import { WalmartOrder } from "types/Walmart/walmartTypes";
 
 const styles = StyleSheet.create({
   page: {

@@ -17,9 +17,9 @@ import { walmartTranslate850, walmartMap850, walmartTranslate856, walmartTransla
 import { mftAuthorization, mftSendMessage } from "api/MFTGateway";
 import { getDearSaleOrderAPI, postDearSaleOrderAPI } from "api/DearSystems";
 
-import { WalmartAdvanceShipNotice } from "types/WalmartUS/stedi856";
-import { WalmartOrder, WalmartTrackerFile, WalmartLabel } from "types/WalmartUS/walmartTypes";
-import { WalmartInvoice, BaselineItemDataInvoiceIT1Loop } from "types/WalmartUS/stedi810";
+import { WalmartAdvanceShipNotice } from "types/Walmart/stedi856";
+import { WalmartOrder, WalmartTrackerFile, WalmartLabel } from "types/Walmart/walmartTypes";
+import { WalmartInvoice, BaselineItemDataInvoiceIT1Loop } from "types/Walmart/stedi810";
 
 import { DearSaleOrder } from "types/Dear/dearSaleOrder";
 

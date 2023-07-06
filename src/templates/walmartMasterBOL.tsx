@@ -3,7 +3,7 @@ import fs from "fs";
 import { jsPDF, AcroFormCheckBox, AcroFormTextField } from "jspdf";
 import path from "path";
 
-import { WalmartOrder } from "types/WalmartUS/walmartTypes";
+import { WalmartOrder } from "types/Walmart/walmartTypes";
 
 const walmartMasterBOL = (selection: WalmartOrder[]) => {
   const orderGroup = (group: any[]) => {

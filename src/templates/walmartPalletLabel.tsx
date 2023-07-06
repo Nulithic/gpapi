@@ -3,7 +3,7 @@ import { Page, Text, View, Document, StyleSheet, Image, renderToStream } from "@
 import JsBarcode from "jsbarcode";
 import { Canvas } from "canvas";
 
-import { WalmartLabel } from "types/WalmartUS/walmartTypes";
+import { WalmartLabel } from "types/Walmart/walmartTypes";
 
 const styles = StyleSheet.create({
   page: {

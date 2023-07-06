@@ -2,7 +2,7 @@ import React from "react";
 import { Page, Text, View, Document, StyleSheet, Svg, Path, renderToStream } from "@react-pdf/renderer";
 import { format } from "date-fns";
 
-import { WalmartOrder } from "types/WalmartUS/walmartTypes";
+import { WalmartOrder } from "types/Walmart/walmartTypes";
 
 interface CheckBoxProps {
   status: boolean;
