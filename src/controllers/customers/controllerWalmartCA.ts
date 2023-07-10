@@ -996,10 +996,6 @@ export const postWalmartASN = async (req: Request, res: Response) => {
     const socketID = req.body.data.socketID.toString();
     const io = req.app.get("io");
 
-    const date = new Date(req.body.data.date);
-    const newDate = format(date, "yyyy-MM-dd");
-    const newTime = format(date, "HH:mm");
-
     const asnList = [];
 
     for (let i = 0; i < data.length; i++) {
@@ -1010,6 +1006,10 @@ export const postWalmartASN = async (req: Request, res: Response) => {
 
       const palletInfo = await WalmartShippingLabelCA.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Pallet" });
       const caseInfo = await WalmartShippingLabelCA.find({ purchaseOrderNumber: data[i].purchaseOrderNumber, type: "Case" });
+
+      const saleData = (await getDearSaleOrderAPI(data[i].purchaseOrderNumber, io, socketID)) as DearSaleOrder;
+      const dateISO = parseISO(saleData.Fulfilments[0].Ship.Lines[0].ShipmentDate.toString());
+      const shipDate = format(dateISO, "yyyy-MM-dd");
 
       let transactionTotal = 2;
 
@@ -1085,9 +1085,9 @@ export const postWalmartASN = async (req: Request, res: Response) => {
           },
           beginning_segment_for_ship_notice_BSN: {
             transaction_set_purpose_code_01: "00",
-            shipment_identification_02: "654321",
-            date_03: newDate,
-            time_04: newTime,
+            shipment_identification_02: data[i].billOfLading,
+            date_03: shipDate,
+            time_04: "00:00",
             hierarchical_structure_code_05: "0001",
           },
         },
@@ -1129,7 +1129,7 @@ export const postWalmartASN = async (req: Request, res: Response) => {
               date_time_reference_DTM: [
                 {
                   date_time_qualifier_01: "011",
-                  date_02: newDate,
+                  date_02: shipDate,
                 },
               ],
               fob_related_instructions_FOB: {
@@ -1196,7 +1196,7 @@ export const postWalmartASN = async (req: Request, res: Response) => {
       asnList.push(asn);
     }
 
-    const tokens = await mftAuthorization();
+    // const tokens = await mftAuthorization();
 
     const responseList = [];
 
@@ -1245,18 +1245,22 @@ export const postWalmartASN = async (req: Request, res: Response) => {
       };
       const edi = await walmartTranslate856(asn, envelope);
       io.to(socketID).emit("postWalmartASN", `${poNumber} - Translate completed.`);
-      const headers = {
-        Authorization: tokens.api_token,
-        "AS2-From": "GreenProjectWalmartCA",
-        "AS2-To": "08925485US00",
-        Subject: "Walmart ASN - Green Project",
-        "Attachment-Name": `${poNumber}-ASN.txt`,
-        "Content-Type": "text/plain",
-      };
+      // const headers = {
+      //   Authorization: tokens.api_token,
+      //   "AS2-From": "GreenProjectWalmartCA",
+      //   "AS2-To": "08925485US00",
+      //   Subject: "Walmart ASN - Green Project",
+      //   "Attachment-Name": `${poNumber}-ASN.txt`,
+      //   "Content-Type": "text/plain",
+      // };
 
-      const response = await mftSendMessage(headers, edi);
-      io.to(socketID).emit("postWalmartASN", `${poNumber} - ${response.message}`);
-      responseList.push(response);
+      // const response = await mftSendMessage(headers, edi);
+      // io.to(socketID).emit("postWalmartASN", `${poNumber} - ${response.message}`);
+      // responseList.push(response);
+
+      // await WalmartOrdersCA.findOneAndUpdate({purchaseOrderNumber: poNumber}, {asnSent: "Yes"})
+
+      responseList.push(edi);
     }
 
     res.status(200).send(responseList);
@@ -1271,10 +1275,6 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
     const socketID = req.body.data.socketID.toString();
     const io = req.app.get("io");
 
-    const date = new Date(req.body.data.date);
-    const newDate = format(date, "yyyy-MM-dd");
-    const newTime = format(date, "HH:mm");
-
     const invoiceList = [];
 
     for (const item of data) {
@@ -1284,29 +1284,38 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
 
       const tds01 = saleData.Invoices[0].Total;
       const tds02 = saleData.Invoices[0].Lines.reduce((a, b) => a + b.Total, 0);
-      const tds04 = tds02 * 0.01;
+      const tds04 = tds02 * 0.02;
       const tds03 = tds01 - tds04;
 
       const dateISO = parseISO(saleData.Fulfilments[0].Ship.Lines[0].ShipmentDate.toString());
       const shipDate = format(dateISO, "yyyy-MM-dd");
 
       const lineItemList: BaselineItemDataInvoiceIT1Loop[] = [];
+      let caseCount = 0;
+
       for (const line of saleData.Invoices[0].Lines) {
         const walmartItem = await WalmartProductsCA.findOne({ sku: line.SKU });
 
         const lineItem = {
           baseline_item_data_invoice_IT1: {
-            quantity_invoiced_02: line.Quantity,
-            unit_or_basis_for_measurement_code_03: "EA",
-            unit_price_04: line.Price,
+            quantity_invoiced_02: line.Quantity / parseInt(walmartItem.caseSize),
+            unit_or_basis_for_measurement_code_03: "CA",
+            unit_price_04: line.Price * parseInt(walmartItem.caseSize),
             product_service_id_qualifier_06: "IN",
             product_service_id_07: walmartItem.walmartItem,
             product_service_id_qualifier_08: "UP",
             product_service_id_09: line.ProductCustomField3,
           },
+          item_physical_details_PO4: {
+            pack_01: parseInt(walmartItem.caseSize),
+          },
         };
+
         lineItemList.push(lineItem);
+        caseCount += line.Quantity / parseInt(walmartItem.caseSize);
       }
+
+      const taxPercent = saleData.ShippingAddress.State == "ON" ? 13 : 5;
 
       const invoice: WalmartInvoice = {
         heading: {
@@ -1315,7 +1324,7 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
             transaction_set_control_number_02: 1,
           },
           beginning_segment_for_invoice_BIG: {
-            date_01: newDate,
+            date_01: format(new Date(saleData.Invoices[0].InvoiceDate), "yyyy-MM-dd"),
             invoice_number_02: saleData.Invoices[0].InvoiceNumber.match(/\d+/).join(""),
             date_03: format(new Date(item.purchaseOrderDate), "yyyy-MM-dd"),
             purchase_order_number_04: item.purchaseOrderNumber,
@@ -1323,18 +1332,24 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
           reference_information_REF: [
             {
               reference_identification_qualifier_01: "IA",
-              reference_identification_02: "546382721",
+              reference_identification_02: "016330721",
             },
             {
               reference_identification_qualifier_01: "DP",
               reference_identification_02: item.departmentNumber,
+            },
+            {
+              reference_identification_qualifier_01: "MR",
+              reference_identification_02: item.purchaseOrderType,
             },
           ],
           party_identification_N1_loop: [
             {
               party_identification_N1: {
                 entity_identifier_code_01: "SU",
-                name_02: "Green Project",
+                name_02: "Green Project Inc.",
+                identification_code_qualifier_03: "UL",
+                identification_code_04: "0819952029607",
               },
             },
             {
@@ -1362,11 +1377,11 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
             {
               terms_type_code_01: "08",
               terms_basis_date_code_02: "3",
-              terms_discount_percent_03: 1,
-              terms_discount_days_due_05: 50,
+              terms_discount_percent_03: 2,
+              terms_discount_days_due_05: 45,
               terms_net_days_07: 90,
               terms_discount_amount_08: parseFloat(tds04.toFixed(2)),
-              description_12: "Net 90",
+              description_12: "2% 45 days, Net 90 days",
             },
           ],
           date_time_reference_DTM: [
@@ -1389,11 +1404,19 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
             amount_03: parseFloat(tds03.toFixed(2)),
             amount_04: parseFloat(tds04.toFixed(2)),
           },
+          tax_information_TXI: [
+            {
+              tax_type_code_01: "GS",
+              monetary_amount_02: saleData.Invoices[0].AdditionalCharges[3].Total,
+              percentage_as_decimal_03: taxPercent,
+              tax_identification_number_09: "747610335RT0001",
+            },
+          ],
           service_promotion_allowance_or_charge_information_SAC_loop: [
             {
               service_promotion_allowance_or_charge_information_SAC: {
                 allowance_or_charge_indicator_01: "A",
-                service_promotion_allowance_or_charge_code_02: "I410",
+                service_promotion_allowance_or_charge_code_02: "A260",
                 amount_05: saleData.Invoices[0].AdditionalCharges[0].Total * -1,
                 allowance_or_charge_method_of_handling_code_12: "02",
               },
@@ -1401,9 +1424,25 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
             {
               service_promotion_allowance_or_charge_information_SAC: {
                 allowance_or_charge_indicator_01: "A",
-                service_promotion_allowance_or_charge_code_02: "F910",
+                service_promotion_allowance_or_charge_code_02: "D500",
                 amount_05: saleData.Invoices[0].AdditionalCharges[1].Total * -1,
                 allowance_or_charge_method_of_handling_code_12: "02",
+              },
+            },
+            {
+              service_promotion_allowance_or_charge_information_SAC: {
+                allowance_or_charge_indicator_01: "A",
+                service_promotion_allowance_or_charge_code_02: "I410",
+                amount_05: saleData.Invoices[0].AdditionalCharges[2].Total * -1,
+                allowance_or_charge_method_of_handling_code_12: "02",
+              },
+            },
+          ],
+          invoice_shipment_summary_ISS_loop: [
+            {
+              invoice_shipment_summary_ISS: {
+                number_of_units_shipped_01: caseCount,
+                unit_or_basis_for_measurement_code_02: "CA",
               },
             },
           ],
@@ -1416,7 +1455,7 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
       invoiceList.push(invoice);
     }
 
-    const tokens = await mftAuthorization();
+    // const tokens = await mftAuthorization();
 
     const responseList = [];
 
@@ -1431,12 +1470,12 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
           authorizationInformation: order.interchangeHeader.authorizationInformation,
           securityQualifier: order.interchangeHeader.securityQualifier,
           securityInformation: order.interchangeHeader.securityInformation,
-          senderQualifier: order.interchangeHeader.senderQualifier,
-          senderId: order.interchangeHeader.senderId,
-          receiverQualifier: order.interchangeHeader.receiverQualifier,
-          receiverId: order.interchangeHeader.receiverId,
+          receiverQualifier: order.interchangeHeader.senderQualifier,
+          receiverId: order.interchangeHeader.senderId,
+          senderQualifier: order.interchangeHeader.receiverQualifier,
+          senderId: order.interchangeHeader.receiverId,
           date: order.interchangeHeader.date,
-          time: order.interchangeHeader.time,
+          time: "00:00",
           repetitionSeparator: order.interchangeHeader.repetitionSeparator,
           controlVersionNumber: order.interchangeHeader.controlVersionNumber,
           controlNumber: control.serialNumber.toString(),
@@ -1445,11 +1484,11 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
           componentSeparator: order.interchangeHeader.componentSeparator,
         },
         groupHeader: {
-          functionalIdentifierCode: order.groupHeader.functionalIdentifierCode,
-          applicationSenderCode: order.groupHeader.applicationSenderCode,
-          applicationReceiverCode: order.groupHeader.applicationReceiverCode,
+          functionalIdentifierCode: "IN",
+          applicationSenderCode: order.groupHeader.applicationReceiverCode,
+          applicationReceiverCode: order.groupHeader.applicationSenderCode,
           date: order.groupHeader.date,
-          time: order.groupHeader.time,
+          time: "00:00",
           controlNumber: control.serialNumber.toString(),
           agencyCode: order.groupHeader.agencyCode,
           release: order.groupHeader.release,
@@ -1466,18 +1505,22 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
 
       const edi = await walmartTranslate810(invoice, envelope);
       io.to(socketID).emit("postWalmartInvoice", `${poNumber} - Translate completed.`);
-      const headers = {
-        Authorization: tokens.api_token,
-        "AS2-From": "GreenProjectWalmartUS",
-        "AS2-To": "08925485US00",
-        Subject: "Walmart Invoice - Green Project",
-        "Attachment-Name": `${poNumber}-invoice.txt`,
-        "Content-Type": "text/plain",
-      };
+      // const headers = {
+      //   Authorization: tokens.api_token,
+      //   "AS2-From": "GreenProjectWalmartUS",
+      //   "AS2-To": "08925485US00",
+      //   Subject: "Walmart Invoice - Green Project",
+      //   "Attachment-Name": `${poNumber}-invoice.txt`,
+      //   "Content-Type": "text/plain",
+      // };
 
-      const response = await mftSendMessage(headers, edi);
-      io.to(socketID).emit("postWalmartInvoice", `${poNumber} - ${response.message}`);
-      responseList.push(response);
+      // const response = await mftSendMessage(headers, edi);
+      // io.to(socketID).emit("postWalmartInvoice", `${poNumber} - ${response.message}`);
+      // responseList.push(response);
+
+      // await WalmartOrdersCA.findOneAndUpdate({purchaseOrderNumber: poNumber}, {invoiceSent: "Yes"})
+
+      responseList.push(edi);
     }
 
     res.status(200).send(responseList);

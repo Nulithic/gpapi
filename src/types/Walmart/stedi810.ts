@@ -95,8 +95,20 @@ export interface TransactionSetHeaderST {
 
 export interface Summary {
   total_monetary_value_summary_TDS: TotalMonetaryValueSummaryTDS;
+  tax_information_TXI?: TaxInformationTXI[];
   service_promotion_allowance_or_charge_information_SAC_loop: ServicePromotionAllowanceOrChargeInformationSACLoop[];
+  invoice_shipment_summary_ISS_loop?: InvoiceShipmentSummaryISSLoop[];
   transaction_totals_CTT: TransactionTotalsCTT;
+}
+
+export interface TaxInformationTXI {
+  tax_type_code_01: string;
+  monetary_amount_02: number;
+  percentage_as_decimal_03: number;
+  tax_jurisdiction_code_qualifier_04?: string;
+  tax_jurisdiction_code_05?: string;
+  dollar_basis_for_percent_08?: number;
+  tax_identification_number_09: string;
 }
 
 export interface ServicePromotionAllowanceOrChargeInformationSACLoop {
@@ -108,6 +120,17 @@ export interface ServicePromotionAllowanceOrChargeInformationSAC {
   service_promotion_allowance_or_charge_code_02: string;
   amount_05: number;
   allowance_or_charge_method_of_handling_code_12: string;
+}
+
+export interface InvoiceShipmentSummaryISSLoop {
+  invoice_shipment_summary_ISS: InvoiceShipmentSummaryISS;
+}
+
+export interface InvoiceShipmentSummaryISS {
+  number_of_units_shipped_01: number;
+  unit_or_basis_for_measurement_code_02: string;
+  weight_03?: number;
+  unit_or_basis_for_measurement_code_04?: string;
 }
 
 export interface TotalMonetaryValueSummaryTDS {
