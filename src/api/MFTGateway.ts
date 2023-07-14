@@ -92,9 +92,9 @@ export const mftGetMessages = async (headers: any, params: any) => {
 export const mftReadMessage = async (headers: any, identifier: string) => {
   try {
     const response = await axios.get(`https://api.mftgateway.com/message/inbox/${identifier}`, {
-      params: {
-        markAsRead: false,
-      },
+      // params: {
+      //   markAsRead: false,
+      // },
       headers: headers,
     });
 
