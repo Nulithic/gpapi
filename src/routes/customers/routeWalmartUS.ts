@@ -12,6 +12,7 @@ import {
   downloadWalmartMultiPalletLabel,
   getExistingWalmartCaseLabel,
   getExistingWalmartPalletLabel,
+  getMFTMessages,
   getNewWalmartCaseLabel,
   getNewWalmartPalletLabel,
   getWalmartCaseLabel,
@@ -41,6 +42,8 @@ const routeWalmartUS = (app: Express) => {
   });
 
   app.get("/api/get/customer/walmart_us/orders", [verifyToken], getWalmartOrders);
+
+  app.post("/api/post/customer/walmart_us/refresh/mft", [verifyToken], getMFTMessages);
 
   app.post("/api/post/customer/walmart_us/import/mft", [verifyToken], importWalmartOrdersMFT);
   app.post("/api/post/customer/walmart_us/import/edi", [verifyToken], importWalmartOrdersEDI);

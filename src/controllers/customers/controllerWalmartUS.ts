@@ -14,16 +14,25 @@ import walmartPalletLabel from "templates/walmartPalletLabel";
 import walmartMasterBOL from "templates/walmartMasterBOL";
 
 import { walmartTranslate850, walmartMap850, walmartTranslate856, walmartTranslate997, walmartTranslate810 } from "api/Stedi";
-import { mftAuthorization, mftSendMessage } from "api/MFTGateway";
+import { mftAuthorization, mftSendMessage, mftGetMessages, mftGetAttachments, mftReadMessage, mftUnreadMessage } from "api/MFTGateway";
 import { getDearSaleOrderAPI, postDearSaleOrderAPI } from "api/DearSystems";
 
-import { WalmartAdvanceShipNotice } from "types/Walmart/stedi856";
-import { WalmartOrder, WalmartTrackerFile, WalmartLabel } from "types/Walmart/walmartTypes";
-import { WalmartInvoice, BaselineItemDataInvoiceIT1Loop } from "types/Walmart/stedi810";
 import { DearSaleOrder } from "types/Dear/dearSaleOrder";
+import { WalmartAdvanceShipNotice } from "types/Walmart/stedi856";
+import { WalmartInvoice, BaselineItemDataInvoiceIT1Loop } from "types/Walmart/stedi810";
+import { WalmartOrder, WalmartTrackerFile, WalmartLabel } from "types/Walmart/walmartTypes";
+import { Attachments, Messages } from "types/mftTypes";
 
-import { WalmartControlGroupUS, WalmartLocationsUS, WalmartOrdersUS, WalmartProductsUS, WalmartShippingLabelUS } from "models/customers/WalmartUS";
+import {
+  WalmartControlGroupUS,
+  WalmartLocationsUS,
+  WalmartMessagesUS,
+  WalmartOrdersUS,
+  WalmartProductsUS,
+  WalmartShippingLabelUS,
+} from "models/customers/WalmartUS";
 import CarrierCodes from "models/customers/modelCarrierCodes";
+import getUrlData from "utilities/getUrlData";
 
 const fileName = path.basename(__filename);
 
@@ -90,6 +99,42 @@ export const getWalmartOrders = async (req: Request, res: Response) => {
     res.status(200).send(orderList);
   } catch (err) {
     res.status(500).send(err.message);
+  }
+};
+
+export const getMFTMessages = async (req: Request, res: Response) => {
+  try {
+    const headers = {
+      Authorization: await mftAuthorization(),
+    };
+
+    // const response = await mftUnreadMessage(headers, "<CLEO-20230621_231320996-77N08E@08925485US00_GreenProjectWalmartUS-T>");
+    // const response2 = await mftUnreadMessage(headers, "<CLEO-20230614_185931657-88O06F@08925485US00_GreenProjectWalmartUS-U>");
+
+    const response = await mftGetMessages(headers, { partner: "08925485US00" });
+
+    for (const message of response.messages) {
+      const resMessage = (await mftReadMessage(headers, message)) as Messages;
+      const dateReceived = new Date(resMessage.timestamp).toLocaleString();
+      console.log("dateReceived:", dateReceived);
+
+      const resAttachment = (await mftGetAttachments(headers, message)) as Attachments;
+      const fileName = resAttachment.attachments[0].name;
+      console.log("fileName:", fileName);
+
+      const matchCheck = fileName.match(/\d{3}(?=.OUT)/);
+      const ediType = matchCheck !== null ? fileName.match(/\d{3}(?=.OUT)/)[0] : "";
+      console.log("ediType:", ediType);
+
+      const fileData = await getUrlData(resAttachment.attachments[0].url);
+      console.log("fileData:", fileData);
+
+      await WalmartMessagesUS.create({ ediType: ediType, dateReceived: dateReceived, fileName: fileName, data: fileData });
+    }
+
+    res.status(200).send(response.messages);
+  } catch (err) {
+    res.status(500).send(err);
   }
 };
 
@@ -231,9 +276,8 @@ export const importWalmartOrdersMFT = async (req: Request, res: Response) => {
     io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 997 translate completed.`);
 
     // transmit 997 edi to partner
-    const tokens = await mftAuthorization();
     const headers = {
-      Authorization: tokens.api_token,
+      Authorization: await mftAuthorization(),
       "AS2-From": "GreenProjectWalmartUS",
       "AS2-To": "08925485US00",
       Subject: "Walmart ACK - Green Project",
@@ -243,7 +287,7 @@ export const importWalmartOrdersMFT = async (req: Request, res: Response) => {
     const response = await mftSendMessage(headers, edi997);
     io.to(socketID).emit("importWalmartOrdersMFT", response.message);
 
-    res.status(200).send(response);
+    res.status(200).send(response.message);
   } catch (err) {
     res.status(500).send(err);
   }
@@ -1175,8 +1219,6 @@ export const postWalmartASN = async (req: Request, res: Response) => {
       asnList.push(asn);
     }
 
-    const tokens = await mftAuthorization();
-
     const responseList = [];
 
     for (const asn of asnList) {
@@ -1223,9 +1265,11 @@ export const postWalmartASN = async (req: Request, res: Response) => {
         },
       };
       const edi = await walmartTranslate856(asn, envelope);
+
       io.to(socketID).emit("postWalmartASN", `${poNumber} - Translate completed.`);
+
       const headers = {
-        Authorization: tokens.api_token,
+        Authorization: await mftAuthorization(),
         "AS2-From": "GreenProjectWalmartUS",
         "AS2-To": "08925485US00",
         Subject: "Walmart ASN - Green Project",
@@ -1395,8 +1439,6 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
       invoiceList.push(invoice);
     }
 
-    const tokens = await mftAuthorization();
-
     const responseList = [];
 
     for (const invoice of invoiceList) {
@@ -1442,11 +1484,12 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
           controlNumber: control.serialNumber.toString(),
         },
       };
-
       const edi = await walmartTranslate810(invoice, envelope);
+
       io.to(socketID).emit("postWalmartInvoice", `${poNumber} - Translate completed.`);
+
       const headers = {
-        Authorization: tokens.api_token,
+        Authorization: await mftAuthorization(),
         "AS2-From": "GreenProjectWalmartUS",
         "AS2-To": "08925485US00",
         Subject: "Walmart Invoice - Green Project",

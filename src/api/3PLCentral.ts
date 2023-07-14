@@ -2,7 +2,7 @@ import axios from "axios";
 
 const data = JSON.stringify({
   grant_type: "client_credentials",
-  user_login_id: "GREPRO",
+  user_login_id: process.env.WMCA_3PL_CLIENT_ID,
 });
 
 export const getAuthToken = async () => {

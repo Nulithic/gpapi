@@ -25,6 +25,7 @@ import { DearSaleOrder } from "types/Dear/dearSaleOrder";
 
 import { WalmartControlGroupCA, WalmartLocationsCA, WalmartOrdersCA, WalmartProductsCA, WalmartShippingLabelCA } from "models/customers/WalmartCA";
 import CarrierCodes from "models/customers/modelCarrierCodes";
+import { getAuthToken } from "api/3PLCentral";
 
 const fileName = path.basename(__filename);
 
@@ -255,9 +256,8 @@ export const importWalmartOrdersMFT = async (req: Request, res: Response) => {
     io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 997 translate completed.`);
 
     // transmit 997 edi to partner
-    const tokens = await mftAuthorization();
     const headers = {
-      Authorization: tokens.api_token,
+      Authorization: await mftAuthorization(),
       "AS2-From": "GreenProjectWalmartUS",
       "AS2-To": "08925485US00",
       Subject: "Walmart ACK - Green Project",
@@ -1532,22 +1532,24 @@ export const postWalmartInvoice = async (req: Request, res: Response) => {
 
 export const postWalmartSync = async (req: Request, res: Response) => {
   try {
-    const data = req.body.data.selection as WalmartOrder[];
-    const socketID = req.body.data.socketID.toString();
-    const io = req.app.get("io");
+    // const data = req.body.data.selection as WalmartOrder[];
+    // const socketID = req.body.data.socketID.toString();
+    // const io = req.app.get("io");
 
-    const dearList = [];
+    // const dearList = [];
 
-    for (const order of data) {
-      const poNumber = order.purchaseOrderNumber;
-      const lineItems = order.baselineItemDataPO1Loop;
+    // for (const order of data) {
+    //   const poNumber = order.purchaseOrderNumber;
+    //   const lineItems = order.baselineItemDataPO1Loop;
 
-      const dearData = await getDearSaleOrderAPI(poNumber, io, socketID);
+    //   const dearData = await getDearSaleOrderAPI(poNumber, io, socketID);
 
-      dearList.push(dearData);
-    }
+    //   dearList.push(dearData);
+    // }
 
-    res.status(200).send(dearList);
+    const response = await getAuthToken();
+
+    res.status(200).send(response);
   } catch (err) {
     console.log(err);
     res.status(500).send(err);
