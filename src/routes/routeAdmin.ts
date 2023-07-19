@@ -1,6 +1,6 @@
 import { Express } from "express";
 
-import verifyToken from "auth/verifyToken";
+import verifyToken from "controllers/customers/auth/verifyToken";
 import { addRole, addUser, deleteRole, deleteUser, getRoles, getUsers, updateUserRole } from "controllers/controllerAdmin";
 
 const routeAdmin = (app: Express) => {

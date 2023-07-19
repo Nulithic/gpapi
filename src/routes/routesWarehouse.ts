@@ -1,6 +1,6 @@
 import { Express } from "express";
 
-import verifyToken from "auth/verifyToken";
+import verifyToken from "controllers/customers/auth/verifyToken";
 import { getBulkShipTemplate, postBulkShip } from "controllers/warehouse/controllerBulkShip";
 import { getCompareTemplate, postCompare } from "controllers/warehouse/controllerCompare";
 import { getTransferTemplate, postTransfer } from "controllers/warehouse/controllerTransfer";

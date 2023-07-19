@@ -3,9 +3,8 @@ import { format, parseISO } from "date-fns";
 import fs from "fs";
 import path from "path";
 
-import { scrapB2B, convertHTML } from "puppet/B2B";
-
 import { userAction } from "utilities/userAction";
+import getUrlData from "utilities/getUrlData";
 
 import walmartPackingSlip from "templates/walmartPackingSlip";
 import walmartUnderlyingBOL from "templates/walmartUnderlyingBOL";
@@ -14,16 +13,24 @@ import walmartPalletLabel from "templates/walmartPalletLabel";
 import walmartMasterBOL from "templates/walmartMasterBOL";
 
 import { walmartTranslate850, walmartMap850, walmartTranslate856, walmartTranslate997, walmartTranslate810 } from "api/Stedi";
-import { mftAuthorization, mftSendMessage } from "api/MFTGateway";
+import { mftAuthorization, mftSendMessage, mftGetMessages, mftGetAttachments, mftReadMessage, mftUnreadMessage } from "api/MFTGateway";
 import { getDearSaleOrderAPI, postDearSaleOrderAPI } from "api/DearSystems";
 
 import { WalmartAdvanceShipNotice } from "types/Walmart/stedi856";
 import { WalmartOrder, WalmartTrackerFile, WalmartLabel } from "types/Walmart/walmartTypes";
 import { WalmartInvoice, BaselineItemDataInvoiceIT1Loop } from "types/Walmart/stedi810";
+import { Attachments, Messages } from "types/mftTypes";
 
 import { DearSaleOrder } from "types/Dear/dearSaleOrder";
 
-import { WalmartControlGroupCA, WalmartLocationsCA, WalmartOrdersCA, WalmartProductsCA, WalmartShippingLabelCA } from "models/customers/WalmartCA";
+import {
+  WalmartControlGroupCA,
+  WalmartLocationsCA,
+  WalmartMessagesCA,
+  WalmartOrdersCA,
+  WalmartProductsCA,
+  WalmartShippingLabelCA,
+} from "models/customers/WalmartCA";
 import CarrierCodes from "models/customers/modelCarrierCodes";
 import { getAuthToken } from "api/3PLCentral";
 
@@ -118,6 +125,38 @@ export const getWalmartOrders = async (req: Request, res: Response) => {
   }
 };
 
+export const downloadWalmartMFT = async (req: Request, res: Response) => {
+  try {
+    const headers = {
+      Authorization: await mftAuthorization(),
+    };
+
+    const response = await mftGetMessages(headers, { partner: "08925485US00" }); // Change partner
+
+    for (const message of response.messages) {
+      const resMessage = (await mftReadMessage(headers, message)) as Messages;
+      const dateReceived = new Date(resMessage.timestamp).toLocaleString();
+      console.log("dateReceived:", dateReceived);
+
+      const resAttachment = (await mftGetAttachments(headers, message)) as Attachments;
+      const fileName = resAttachment.attachments[0].name;
+      console.log("fileName:", fileName);
+
+      const matchCheck = fileName.match(/\d{3}(?=.OUT)/);
+      const ediType = matchCheck !== null ? fileName.match(/\d{3}(?=.OUT)/)[0] : "";
+      console.log("ediType:", ediType);
+
+      const fileData = await getUrlData(resAttachment.attachments[0].url);
+      console.log("fileData:", fileData);
+
+      await WalmartMessagesCA.create({ ediType: ediType, dateReceived: dateReceived, fileName: fileName, data: fileData, imported: false });
+    }
+
+    res.status(200).send(response.messages);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+};
 export const importWalmartOrdersMFT = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, `${fileName} - importWalmartOrdersMFT`);
@@ -125,153 +164,156 @@ export const importWalmartOrdersMFT = async (req: Request, res: Response) => {
     const io = req.app.get("io");
 
     // get edi
-    const filePath = path.join(__dirname, "orders.txt");
-    const dataEDI = fs.readFileSync(filePath, "utf8");
-    //const dataEDI = await mftReceiveMessage();
+    const dataEDI = await WalmartMessagesCA.find({ ediType: "850", imported: false });
 
-    // translate and map edi to json
-    const translationData = await walmartTranslate850(dataEDI);
-    io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 850 translate completed.`);
-    const data = (await walmartMap850(translationData)) as WalmartOrder[];
-    io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 850 mapping completed.`);
+    for (const edi of dataEDI) {
+      // translate and map edi to json
+      const translationData = await walmartTranslate850(edi.data);
+      io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 850 translate completed.`);
+      const data = (await walmartMap850(translationData)) as WalmartOrder[];
+      io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 850 mapping completed.`);
 
-    // save to local db
-    const ak2List = [];
-    for (const item of data) {
-      const locationResponse = await WalmartLocationsCA.find({ gln: item.buyingPartyGLN });
-      const locationFilter = locationResponse.find((item) => item.addressType == "2 GENERAL DC MERCHANDISE" || item.addressType == "1 REGULAR DC MERCHANDISE");
+      // save to local db
+      const ak2List = [];
+      for (const item of data) {
+        const locationResponse = await WalmartLocationsCA.find({ gln: item.buyingPartyGLN });
+        const locationFilter = locationResponse.find(
+          (item) => item.addressType == "2 GENERAL DC MERCHANDISE" || item.addressType == "1 REGULAR DC MERCHANDISE"
+        );
 
-      const location = locationFilter ?? locationResponse[0];
+        const location = locationFilter ?? locationResponse[0];
 
-      await WalmartOrdersCA.updateOne(
-        { purchaseOrderNumber: item.purchaseOrderNumber },
-        {
-          ...item,
-          actualWeight: "",
-          billOfLading: "",
-          carrierSCAC: "",
-          carrierName: "",
-          carrierReference: "",
-          carrierClass: "",
-          distributionCenterName: location.addressLine1,
-          distributionCenterNumber: location.storeNumber,
-          nmfc: "",
-          floorOrPallet: "",
-          height: "",
-          width: "",
-          length: "",
-          invoiceDate: "",
-          loadDestination: "",
-          mustArriveByDate: "",
-          numberOfCartons: "",
-          saleOrderNumber: "",
-          shipDateScheduled: "",
-          archived: "No",
-          asnSent: "No",
-          invoiceSent: "No",
-          hasPalletLabel: "No",
+        await WalmartOrdersCA.updateOne(
+          { purchaseOrderNumber: item.purchaseOrderNumber },
+          {
+            ...item,
+            actualWeight: "",
+            billOfLading: "",
+            carrierSCAC: "",
+            carrierName: "",
+            carrierReference: "",
+            carrierClass: "",
+            distributionCenterName: location.addressLine1,
+            distributionCenterNumber: location.storeNumber,
+            nmfc: "",
+            floorOrPallet: "",
+            height: "",
+            width: "",
+            length: "",
+            invoiceDate: "",
+            loadDestination: "",
+            mustArriveByDate: "",
+            numberOfCartons: "",
+            saleOrderNumber: "",
+            shipDateScheduled: "",
+            archived: "No",
+            asnSent: "No",
+            invoiceSent: "No",
+            hasPalletLabel: "No",
+          },
+          { upsert: true }
+        );
+
+        const ak2 = {
+          transaction_set_response_header_AK2: {
+            transaction_set_identifier_code_01: "850",
+            transaction_set_control_number_02: item.transactionSetHeaderST.transactionSetControlNumber02,
+          },
+          transaction_set_response_trailer_AK5: {
+            transaction_set_acknowledgment_code_01: "A",
+          },
+        };
+
+        ak2List.push(ak2);
+      }
+
+      // create 997 json
+      const control = await walmartCG();
+      const envelope = {
+        interchangeHeader: {
+          authorizationInformationQualifier: data[0].interchangeHeader.authorizationInformationQualifier,
+          authorizationInformation: data[0].interchangeHeader.authorizationInformation,
+          securityQualifier: data[0].interchangeHeader.securityQualifier,
+          securityInformation: data[0].interchangeHeader.securityInformation,
+          senderQualifier: data[0].interchangeHeader.senderQualifier,
+          senderId: data[0].interchangeHeader.senderId,
+          receiverQualifier: data[0].interchangeHeader.receiverQualifier,
+          receiverId: data[0].interchangeHeader.receiverId,
+          date: data[0].interchangeHeader.date,
+          time: data[0].interchangeHeader.time,
+          repetitionSeparator: data[0].interchangeHeader.repetitionSeparator,
+          controlVersionNumber: data[0].interchangeHeader.controlVersionNumber,
+          controlNumber: control.serialNumber.toString(),
+          acknowledgementRequestedCode: data[0].interchangeHeader.acknowledgementRequestedCode,
+          usageIndicatorCode: data[0].interchangeHeader.usageIndicatorCode,
+          componentSeparator: data[0].interchangeHeader.componentSeparator,
         },
-        { upsert: true }
-      );
-
-      const ak2 = {
-        transaction_set_response_header_AK2: {
-          transaction_set_identifier_code_01: "850",
-          transaction_set_control_number_02: item.transactionSetHeaderST.transactionSetControlNumber02,
+        groupHeader: {
+          functionalIdentifierCode: data[0].groupHeader.functionalIdentifierCode,
+          applicationSenderCode: data[0].groupHeader.applicationSenderCode,
+          applicationReceiverCode: data[0].groupHeader.applicationReceiverCode,
+          date: data[0].groupHeader.date,
+          time: data[0].groupHeader.time,
+          controlNumber: control.serialNumber.toString(),
+          agencyCode: data[0].groupHeader.agencyCode,
+          release: data[0].groupHeader.release,
         },
-        transaction_set_response_trailer_AK5: {
-          transaction_set_acknowledgment_code_01: "A",
+        groupTrailer: {
+          numberOfTransactions: data[0].groupTrailer.numberOfTransactions,
+          controlNumber: control.serialNumber.toString(),
+        },
+        interchangeTrailer: {
+          numberOfFunctionalGroups: data[0].interchangeTrailer.numberOfFunctionalGroups,
+          controlNumber: control.serialNumber.toString(),
+        },
+      };
+      const input = {
+        heading: {
+          transaction_set_header_ST: {
+            transaction_set_identifier_code_01: "997",
+            transaction_set_control_number_02: 1,
+          },
+          functional_group_response_header_AK1: {
+            functional_identifier_code_01: "PO",
+            group_control_number_02: parseInt(data[0].interchangeHeader.controlNumber),
+          },
+          transaction_set_response_header_AK2_loop: ak2List,
+          functional_group_response_trailer_AK9: {
+            functional_group_acknowledge_code_01: "A",
+            number_of_transaction_sets_included_02: 1,
+            number_of_received_transaction_sets_03: 1,
+            number_of_accepted_transaction_sets_04: 1,
+          },
+          transaction_set_trailer_SE: {
+            number_of_included_segments_01: 6,
+            transaction_set_control_number_02: 1,
+          },
         },
       };
 
-      ak2List.push(ak2);
+      // translate 997 json to edi
+      const edi997 = await walmartTranslate997(input, envelope);
+      io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 997 translate completed.`);
+
+      // transmit 997 edi to partner
+      const headers = {
+        Authorization: await mftAuthorization(),
+        "AS2-From": "GreenProjectWalmart",
+        "AS2-To": "08925485US00", // Change
+        Subject: "Walmart ACK - Green Project",
+        "Attachment-Name": `${input.heading.functional_group_response_header_AK1.group_control_number_02}-ACK.txt`,
+        "Content-Type": "text/plain",
+      };
+      const response = await mftSendMessage(headers, edi997);
+      io.to(socketID).emit("importWalmartOrdersMFT", response.message);
     }
 
-    // create 997 json
-    const control = await walmartCG();
-    const envelope = {
-      interchangeHeader: {
-        authorizationInformationQualifier: data[0].interchangeHeader.authorizationInformationQualifier,
-        authorizationInformation: data[0].interchangeHeader.authorizationInformation,
-        securityQualifier: data[0].interchangeHeader.securityQualifier,
-        securityInformation: data[0].interchangeHeader.securityInformation,
-        senderQualifier: data[0].interchangeHeader.senderQualifier,
-        senderId: data[0].interchangeHeader.senderId,
-        receiverQualifier: data[0].interchangeHeader.receiverQualifier,
-        receiverId: data[0].interchangeHeader.receiverId,
-        date: data[0].interchangeHeader.date,
-        time: data[0].interchangeHeader.time,
-        repetitionSeparator: data[0].interchangeHeader.repetitionSeparator,
-        controlVersionNumber: data[0].interchangeHeader.controlVersionNumber,
-        controlNumber: control.serialNumber.toString(),
-        acknowledgementRequestedCode: data[0].interchangeHeader.acknowledgementRequestedCode,
-        usageIndicatorCode: data[0].interchangeHeader.usageIndicatorCode,
-        componentSeparator: data[0].interchangeHeader.componentSeparator,
-      },
-      groupHeader: {
-        functionalIdentifierCode: data[0].groupHeader.functionalIdentifierCode,
-        applicationSenderCode: data[0].groupHeader.applicationSenderCode,
-        applicationReceiverCode: data[0].groupHeader.applicationReceiverCode,
-        date: data[0].groupHeader.date,
-        time: data[0].groupHeader.time,
-        controlNumber: control.serialNumber.toString(),
-        agencyCode: data[0].groupHeader.agencyCode,
-        release: data[0].groupHeader.release,
-      },
-      groupTrailer: {
-        numberOfTransactions: data[0].groupTrailer.numberOfTransactions,
-        controlNumber: control.serialNumber.toString(),
-      },
-      interchangeTrailer: {
-        numberOfFunctionalGroups: data[0].interchangeTrailer.numberOfFunctionalGroups,
-        controlNumber: control.serialNumber.toString(),
-      },
-    };
-    const input = {
-      heading: {
-        transaction_set_header_ST: {
-          transaction_set_identifier_code_01: "997",
-          transaction_set_control_number_02: 1,
-        },
-        functional_group_response_header_AK1: {
-          functional_identifier_code_01: "PO",
-          group_control_number_02: parseInt(data[0].interchangeHeader.controlNumber),
-        },
-        transaction_set_response_header_AK2_loop: ak2List,
-        functional_group_response_trailer_AK9: {
-          functional_group_acknowledge_code_01: "A",
-          number_of_transaction_sets_included_02: 1,
-          number_of_received_transaction_sets_03: 1,
-          number_of_accepted_transaction_sets_04: 1,
-        },
-        transaction_set_trailer_SE: {
-          number_of_included_segments_01: 6,
-          transaction_set_control_number_02: 1,
-        },
-      },
-    };
-
-    // translate 997 json to edi
-    const edi997 = await walmartTranslate997(input, envelope);
-    io.to(socketID).emit("importWalmartOrdersMFT", `Walmart 997 translate completed.`);
-
-    // transmit 997 edi to partner
-    const headers = {
-      Authorization: await mftAuthorization(),
-      "AS2-From": "GreenProjectWalmartUS",
-      "AS2-To": "08925485US00",
-      Subject: "Walmart ACK - Green Project",
-      "Attachment-Name": `${input.heading.functional_group_response_header_AK1.group_control_number_02}-ACK.txt`,
-      "Content-Type": "text/plain",
-    };
-    const response = await mftSendMessage(headers, edi997);
-    io.to(socketID).emit("importWalmartOrdersMFT", response.message);
-
-    res.status(200).send(response);
+    res.status(200).send("Import Completed.");
   } catch (err) {
     res.status(500).send(err);
   }
 };
+
 export const importWalmartOrdersEDI = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, `${fileName} - importWalmartOrdersEDI`);
@@ -327,95 +369,6 @@ export const importWalmartOrdersEDI = async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 };
-export const importWalmartOrdersB2B = async (req: Request, res: Response) => {
-  try {
-    userAction(req.body.user, `${fileName} - importWalmartOrdersB2B`);
-
-    const dataB2B = req.body.dataB2B;
-    const socketID = req.body.socketID.toString();
-    const io = req.app.get("io");
-
-    const day = format(parseISO(dataB2B.date), "dd");
-    const monthYear = format(parseISO(dataB2B.date), "yyyyMM");
-
-    // scrap B2B for href links
-    const data = await scrapB2B(day, monthYear, io, socketID);
-    // get POS list
-    const POS = data.filter((item) => new URLSearchParams(item).get("dt") === "POS");
-    io.to(socketID).emit("importWalmartOrdersB2B", `Total POS found: ${POS.length}`);
-
-    // convert HTML to text
-    let posList = [];
-    for (let i = 0; i < POS.length; i++) {
-      const text = await convertHTML(POS[i]);
-      posList.push(text);
-      io.to(socketID).emit("importWalmartOrdersB2B", `Conversion ${i + 1} completed.`);
-    }
-
-    // group EDIs by control number
-    const group = groupBy(posList, (v) => v.id);
-    let groupList = [];
-    for (const [key, value] of Object.entries(group)) {
-      let edi = value[0].header;
-      for (const item of value) {
-        edi = edi + item.body;
-      }
-      edi = edi + value[0].footer;
-      edi = edi.replace(/~~/g, "~");
-      groupList.push(edi);
-    }
-
-    // convert EDIs to JSON
-    let translationList: WalmartOrder[] = [];
-    for (const item of groupList) {
-      const translationData = await walmartTranslate850(item);
-      io.to(socketID).emit("postWalmartImportB2B", "Translate EDI completed.");
-
-      const data = await walmartMap850(translationData);
-      io.to(socketID).emit("postWalmartImportB2B", "Map EDI completed.");
-
-      translationList.push(data);
-    }
-
-    // save JSON to database
-    for (const item of translationList.flat()) {
-      await WalmartOrdersCA.updateOne(
-        { purchaseOrderNumber: item.purchaseOrderNumber },
-        {
-          ...item,
-          actualWeight: "",
-          billOfLading: "",
-          carrierSCAC: "",
-          carrierReference: "",
-          carrierClass: "",
-          nmfc: "",
-          floorOrPallet: "",
-          height: "",
-          width: "",
-          length: "",
-          invoiceDate: "",
-          loadDestination: "",
-          mustArriveByDate: "",
-          numberOfCartons: "",
-          saleOrderNumber: "",
-          shipDateScheduled: "",
-          archived: "No",
-          asnSent: "No",
-          invoiceSent: "No",
-          hasPalletLabel: "No",
-        },
-        { upsert: true }
-      );
-    }
-
-    io.to(socketID).emit("importWalmartOrdersB2B", "Import completed.");
-
-    res.status(200).send(translationList);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send(err);
-  }
-};
 export const importWalmartTracker = async (req: Request, res: Response) => {
   try {
     userAction(req.body.user, `${fileName} - importWalmartTracker`);
@@ -465,6 +418,7 @@ export const importWalmartTracker = async (req: Request, res: Response) => {
   }
 };
 export const importWalmartLocation = (req: Request, res: Response) => {};
+
 export const archiveWalmartOrder = async (req: Request, res: Response) => {
   const list = req.body.data as WalmartOrder[];
   try {
@@ -1097,25 +1051,25 @@ export const postWalmartASN = async (req: Request, res: Response) => {
               carrier_details_quantity_and_weight_TD1: [
                 {
                   weight_qualifier_06: "G",
-                  weight_07: parseInt(data[i].actualWeight),
+                  weight_07: parseInt(data[i].actualWeight), // required
                   unit_or_basis_for_measurement_code_08: "LB",
                 },
               ],
               carrier_details_routing_sequence_transit_time_TD5: [
                 {
                   identification_code_qualifier_02: "2",
-                  identification_code_03: data[i].carrierSCAC,
+                  identification_code_03: data[i].carrierSCAC, // required
                   transportation_method_type_code_04: "M", // maybe
                 },
               ],
               reference_information_REF: [
                 {
                   reference_identification_qualifier_01: "BM",
-                  reference_identification_02: data[i].billOfLading,
+                  reference_identification_02: data[i].billOfLading, // required
                 },
                 {
                   reference_identification_qualifier_01: "CN",
-                  reference_identification_02: data[i].carrierReference,
+                  reference_identification_02: data[i].carrierReference, // required
                 },
                 {
                   reference_identification_qualifier_01: "LO",

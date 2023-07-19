@@ -1,6 +1,6 @@
 import { Express } from "express";
 
-import verifyToken from "auth/verifyToken";
+import verifyToken from "controllers/customers/auth/verifyToken";
 import { getUser, setStateCookie, userLogin, userLogout } from "controllers/controllerAuth";
 
 const routeAuth = (app: Express) => {

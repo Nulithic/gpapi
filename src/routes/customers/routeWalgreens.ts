@@ -1,6 +1,6 @@
 import { Express } from "express";
 
-import verifyToken from "auth/verifyToken";
+import verifyToken from "controllers/customers/auth/verifyToken";
 
 const routeWalgreens = (app: Express) => {
   app.use((req, res, next) => {

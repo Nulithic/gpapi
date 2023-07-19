@@ -1,6 +1,6 @@
 import { Express } from "express";
 
-import verifyToken from "auth/verifyToken";
+import verifyToken from "controllers/customers/auth/verifyToken";
 import dear from "controllers/dear";
 
 const dearRoutes = (app: Express) => {

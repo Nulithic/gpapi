@@ -1,6 +1,6 @@
 import { Express } from "express";
 
-import verifyToken from "auth/verifyToken";
+import verifyToken from "controllers/customers/auth/verifyToken";
 import { getLogs } from "controllers/controllerLog";
 
 const logRoutes = (app: Express) => {
