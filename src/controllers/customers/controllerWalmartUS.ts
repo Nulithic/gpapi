@@ -108,9 +108,6 @@ export const getMFTMessages = async (req: Request, res: Response) => {
       Authorization: await mftAuthorization(),
     };
 
-    // const response = await mftUnreadMessage(headers, "<CLEO-20230621_231320996-77N08E@08925485US00_GreenProjectWalmartUS-T>");
-    // const response2 = await mftUnreadMessage(headers, "<CLEO-20230614_185931657-88O06F@08925485US00_GreenProjectWalmartUS-U>");
-
     const response = await mftGetMessages(headers, { partner: "08925485US00" });
 
     for (const message of response.messages) {
