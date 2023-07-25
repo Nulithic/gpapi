@@ -36,12 +36,6 @@ import { getAuthToken } from "api/3PLCentral";
 
 const fileName = path.basename(__filename);
 
-const groupBy = <T>(array: T[], predicate: (value: T, index: number, array: T[]) => string) =>
-  array.reduce((acc, value, index, array) => {
-    (acc[predicate(value, index, array)] ||= []).push(value);
-    return acc;
-  }, {} as { [key: string]: T[] });
-
 const walmartSSCC = async () => {
   const lastRecord = await WalmartShippingLabelCA.findOne().sort("-serialNumber");
   const newSerialCode = lastRecord ? lastRecord.serialNumber + 1 : 0;

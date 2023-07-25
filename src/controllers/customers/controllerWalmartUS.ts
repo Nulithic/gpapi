@@ -396,6 +396,11 @@ export const importWalmartOrdersB2B = async (req: Request, res: Response) => {
 
     // save JSON to database
     for (const item of translationList.flat()) {
+      const locationResponse = await WalmartLocationsUS.find({ gln: item.buyingPartyGLN });
+      const locationFilter = locationResponse.find((item) => item.addressType == "2 GENERAL DC MERCHANDISE" || item.addressType == "1 REGULAR DC MERCHANDISE");
+
+      const location = locationFilter ?? locationResponse[0];
+
       await WalmartOrdersUS.updateOne(
         { purchaseOrderNumber: item.purchaseOrderNumber },
         {
@@ -403,8 +408,11 @@ export const importWalmartOrdersB2B = async (req: Request, res: Response) => {
           actualWeight: "",
           billOfLading: "",
           carrierSCAC: "",
+          carrierName: "",
           carrierReference: "",
           carrierClass: "",
+          distributionCenterName: location.addressLine1,
+          distributionCenterNumber: location.storeNumber,
           nmfc: "",
           floorOrPallet: "",
           height: "",

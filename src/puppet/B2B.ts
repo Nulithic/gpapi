@@ -16,23 +16,23 @@ export const scrapB2B = async (day: string, monthYear: string, io: any, socketID
     await page.type("#password", process.env.B2B_PASSWORD);
     await page.click('input[value="Login"]');
     await page.waitForFunction("window.location.pathname === '/ClientPortal/splash.asp'");
-    io.to(socketID).emit("postWalmartImportB2B", "Login completed.");
+    io.to(socketID).emit("importWalmartOrdersB2B", "Login completed.");
 
     await page.goto("https://www.b2bgateway.net/ClientPortal/tranreport.asp");
     await page.waitForFunction("window.location.pathname === '/ClientPortal/tranreport.asp'");
-    io.to(socketID).emit("postWalmartImportB2B", "Navigate to transaction report completed.");
+    io.to(socketID).emit("importWalmartOrdersB2B", "Navigate to transaction report completed.");
 
     await page.select('select[name="selectMonthYear"]', monthYear);
     await page.waitForSelector('select[name="selectMonthYear"]');
-    io.to(socketID).emit("postWalmartImportB2B", "Change month completed.");
+    io.to(socketID).emit("importWalmartOrdersB2B", "Change month completed.");
 
     await page.select('select[name="selectDay"]', day);
     await page.waitForSelector('select[name="selectDay"]');
-    io.to(socketID).emit("postWalmartImportB2B", "Change day completed.");
+    io.to(socketID).emit("importWalmartOrdersB2B", "Change day completed.");
 
     await page.select('select[name="FilterDocType"]', "POS");
     await page.waitForSelector('select[name="FilterDocType"]');
-    io.to(socketID).emit("postWalmartImportB2B", "Change filter completed.");
+    io.to(socketID).emit("importWalmartOrdersB2B", "Change filter completed.");
 
     const pageSelector = await page.$('td[class="rtdb"]');
 
@@ -40,7 +40,7 @@ export const scrapB2B = async (day: string, monthYear: string, io: any, socketID
       const htmlPage = await page.$eval('td[class="rtdb"]', (el) => el.innerText);
 
       const pageNumbers = htmlPage.match(/Page: +([0-9]+) +of +([0-9]+)/);
-      io.to(socketID).emit("postWalmartImportB2B", `Total Pages: ${pageNumbers[2]}`);
+      io.to(socketID).emit("importWalmartOrdersB2B", `Total Pages: ${pageNumbers[2]}`);
 
       for (let i = 1; i <= parseInt(pageNumbers[2]); i++) {
         await page.waitForXPath('//a[contains(text(), "View")]');
@@ -51,7 +51,7 @@ export const scrapB2B = async (day: string, monthYear: string, io: any, socketID
 
         docList.push(hrefs);
 
-        io.to(socketID).emit("postWalmartImportB2B", `Page: ${i} extracted.`);
+        io.to(socketID).emit("importWalmartOrdersB2B", `Page: ${i} extracted.`);
 
         await page.click('input[value=">"]');
       }
@@ -63,11 +63,11 @@ export const scrapB2B = async (day: string, monthYear: string, io: any, socketID
     await browser.close();
 
     console.log("B2B scraping completed.");
-    io.to(socketID).emit("postWalmartImportB2B", "B2B scraping completed.");
+    io.to(socketID).emit("importWalmartOrdersB2B", "B2B scraping completed.");
     return docList.flat();
   } catch (err) {
     console.log(err);
-    io.to(socketID).emit("postWalmartImportB2B", "Import failed, try again.");
+    io.to(socketID).emit("importWalmartOrdersB2B", "Import failed, try again.");
   }
 };
 
