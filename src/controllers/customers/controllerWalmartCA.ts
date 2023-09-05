@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { format, parseISO } from "date-fns";
-import fs from "fs";
 import path from "path";
 
 import { userAction } from "utilities/userAction";
@@ -32,7 +31,7 @@ import {
   WalmartShippingLabelCA,
 } from "models/customers/WalmartCA";
 import CarrierCodes from "models/customers/modelCarrierCodes";
-import { getAuthToken } from "api/3PLCentral";
+import { getOrderByReferenceNumber } from "api/3PLCentral";
 
 const fileName = path.basename(__filename);
 
@@ -934,6 +933,7 @@ export const deleteWalmartProducts = async (req: Request, res: Response) => {
 };
 
 // needs Weight, SCAC, BOL, Carrier Reference
+// /heading/beginning_segment_for_ship_notice_BSN/shipment_identification_02 | BOL
 // /detail/hierarchical_level_HL_loop/0/carrier_details_quantity_and_weight_TD1/0/weight_07 | Weight
 // /detail/hierarchical_level_HL_loop/0/carrier_details_routing_sequence_transit_time_TD5/0/identification_code_03 | SCAC
 // /detail/hierarchical_level_HL_loop/0/reference_information_REF/0/reference_identification_02 | BOL
@@ -1025,6 +1025,8 @@ export const postWalmartASN = async (req: Request, res: Response) => {
         } else return await getCaseStructure();
       };
 
+      const ca3plData = await getOrderByReferenceNumber(data[i].purchaseOrderNumber);
+
       const asn: WalmartAdvanceShipNotice = {
         heading: {
           transaction_set_header_ST: {
@@ -1033,7 +1035,7 @@ export const postWalmartASN = async (req: Request, res: Response) => {
           },
           beginning_segment_for_ship_notice_BSN: {
             transaction_set_purpose_code_01: "00",
-            shipment_identification_02: data[i].billOfLading,
+            shipment_identification_02: ca3plData.routingInfo.billOfLading, // required
             date_03: shipDate,
             time_04: "00:00",
             hierarchical_structure_code_05: "0001",
@@ -1045,29 +1047,29 @@ export const postWalmartASN = async (req: Request, res: Response) => {
               carrier_details_quantity_and_weight_TD1: [
                 {
                   weight_qualifier_06: "G",
-                  weight_07: parseInt(data[i].actualWeight), // required
+                  weight_07: ca3plData.totalWeight, // required
                   unit_or_basis_for_measurement_code_08: "LB",
                 },
               ],
               carrier_details_routing_sequence_transit_time_TD5: [
                 {
                   identification_code_qualifier_02: "2",
-                  identification_code_03: data[i].carrierSCAC, // required
+                  identification_code_03: "PMLS", // required
                   transportation_method_type_code_04: "M", // maybe
                 },
               ],
               reference_information_REF: [
                 {
                   reference_identification_qualifier_01: "BM",
-                  reference_identification_02: data[i].billOfLading, // required
+                  reference_identification_02: ca3plData.routingInfo.billOfLading, // required
                 },
                 {
                   reference_identification_qualifier_01: "CN",
-                  reference_identification_02: data[i].carrierReference, // required
+                  reference_identification_02: ca3plData.routingInfo.loadNumber, // required
                 },
                 {
                   reference_identification_qualifier_01: "LO",
-                  reference_identification_02: "0",
+                  reference_identification_02: ca3plData.routingInfo.loadNumber,
                 },
                 {
                   reference_identification_qualifier_01: "AO",
@@ -1495,7 +1497,7 @@ export const postWalmartSync = async (req: Request, res: Response) => {
     //   dearList.push(dearData);
     // }
 
-    const response = await getAuthToken();
+    const response = await getOrderByReferenceNumber("3850800708");
 
     res.status(200).send(response);
   } catch (err) {
